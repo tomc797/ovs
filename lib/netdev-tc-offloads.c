@@ -286,7 +286,7 @@ get_prio_for_tc_flower(struct tc_flower *flower)
 {
     static struct hmap prios = HMAP_INITIALIZER(&prios);
     static struct ovs_mutex prios_lock = OVS_MUTEX_INITIALIZER;
-    static uint16_t last_prio = 0;
+    static uint16_t last_prio = TC_RESERVED_PRIORITY_MAX;
     size_t key_len = sizeof(struct tc_flower_key);
     size_t hash = hash_int((OVS_FORCE uint32_t) flower->key.eth_type, 0);
     struct prio_map_data *data;
@@ -582,7 +582,9 @@ parse_tc_flower_to_match(struct tc_flower *flower,
     }
 
     if (flower->tunnel) {
-        match_set_tun_id(match, flower->key.tunnel.id);
+        if (flower->mask.tunnel.id) {
+            match_set_tun_id(match, flower->key.tunnel.id);
+        }
         if (flower->key.tunnel.ipv4.ipv4_dst) {
             match_set_tun_src(match, flower->key.tunnel.ipv4.ipv4_src);
             match_set_tun_dst(match, flower->key.tunnel.ipv4.ipv4_dst);
@@ -636,7 +638,9 @@ parse_tc_flower_to_match(struct tc_flower *flower,
                 size_t tunnel_offset =
                     nl_msg_start_nested(buf, OVS_KEY_ATTR_TUNNEL);
 
-                nl_msg_put_be64(buf, OVS_TUNNEL_KEY_ATTR_ID, action->encap.id);
+                if (action->encap.id_present) {
+                    nl_msg_put_be64(buf, OVS_TUNNEL_KEY_ATTR_ID, action->encap.id);
+                }
                 if (action->encap.ipv4.ipv4_src) {
                     nl_msg_put_be32(buf, OVS_TUNNEL_KEY_ATTR_IPV4_SRC,
                                     action->encap.ipv4.ipv4_src);
@@ -838,11 +842,13 @@ parse_put_flow_set_action(struct tc_flower *flower, struct tc_action *action,
     tunnel_len = nl_attr_get_size(set);
 
     action->type = TC_ACT_ENCAP;
+    action->encap.id_present = false;
     flower->action_count++;
     NL_ATTR_FOR_EACH_UNSAFE(tun_attr, tun_left, tunnel, tunnel_len) {
         switch (nl_attr_type(tun_attr)) {
         case OVS_TUNNEL_KEY_ATTR_ID: {
             action->encap.id = nl_attr_get_be64(tun_attr);
+            action->encap.id_present = true;
         }
         break;
         case OVS_TUNNEL_KEY_ATTR_IPV4_SRC: {
@@ -1009,12 +1015,12 @@ test_key_and_mask(struct match *match)
                key->nw_proto == IPPROTO_ICMPV6) {
         if (mask->tp_src) {
             VLOG_DBG_RL(&rl,
-                        "offloading attribute icmp_type isn't supported");
+                        "offloading attribute icmpv6_type isn't supported");
             return EOPNOTSUPP;
         }
         if (mask->tp_dst) {
             VLOG_DBG_RL(&rl,
-                        "offloading attribute icmp_code isn't supported");
+                        "offloading attribute icmpv6_code isn't supported");
             return EOPNOTSUPP;
         }
     } else if (key->dl_type == htons(OFP_DL_TYPE_NOT_ETH_TYPE)) {
@@ -1107,6 +1113,7 @@ netdev_tc_flow_put(struct netdev *netdev, struct match *match,
         flower.key.tunnel.tp_dst = tnl->tp_dst;
         flower.mask.tunnel.tos = tnl_mask->ip_tos;
         flower.mask.tunnel.ttl = tnl_mask->ip_ttl;
+        flower.mask.tunnel.id = (tnl->flags & FLOW_TNL_F_KEY) ? tnl_mask->tun_id : 0;
         flower_match_to_tun_opt(&flower, tnl, tnl_mask);
         flower.tunnel = true;
     }
@@ -1380,9 +1387,9 @@ netdev_tc_flow_get(struct netdev *netdev OVS_UNUSED,
         return -ifindex;
     }
 
-    VLOG_DBG_RL(&rl, "flow get (dev %s prio %d handle %d)",
-                netdev_get_name(dev), prio, handle);
-    block_id = get_block_id_from_netdev(netdev);
+    block_id = get_block_id_from_netdev(dev);
+    VLOG_DBG_RL(&rl, "flow get (dev %s prio %d handle %d block_id %d)",
+                netdev_get_name(dev), prio, handle, block_id);
     err = tc_get_flower(ifindex, prio, handle, &flower, block_id);
     netdev_close(dev);
     if (err) {
@@ -1426,7 +1433,7 @@ netdev_tc_flow_del(struct netdev *netdev OVS_UNUSED,
         return -ifindex;
     }
 
-    block_id = get_block_id_from_netdev(netdev);
+    block_id = get_block_id_from_netdev(dev);
 
     if (stats) {
         memset(stats, 0, sizeof *stats);
@@ -1519,6 +1526,9 @@ netdev_tc_init_flow_api(struct netdev *netdev)
                     netdev_get_name(netdev), ovs_strerror(-ifindex));
         return -ifindex;
     }
+
+    /* make sure there is no ingress qdisc */
+    tc_add_del_ingress_qdisc(ifindex, false, 0);
 
     if (ovsthread_once_start(&block_once)) {
         probe_tc_block_support(ifindex);

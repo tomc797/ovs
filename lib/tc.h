@@ -41,6 +41,13 @@
 
 #define TC_POLICY_DEFAULT "none"
 
+enum tc_flower_reserved_prio {
+    TC_RESERVED_PRIORITY_NONE,
+    TC_RESERVED_PRIORITY_POLICE,
+    __TC_RESERVED_PRIORITY_MAX
+};
+#define TC_RESERVED_PRIORITY_MAX (__TC_RESERVED_PRIORITY_MAX -1)
+
 /* Returns tc handle 'major':'minor'. */
 static inline unsigned int
 tc_make_handle(unsigned int major, unsigned int minor)
@@ -149,6 +156,7 @@ struct tc_action {
         } vlan;
 
         struct {
+            bool id_present;
             ovs_be64 id;
             ovs_be16 tp_src;
             ovs_be16 tp_dst;

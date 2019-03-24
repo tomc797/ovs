@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2017 Nicira, Inc.
+ * Copyright (c) 2008-2018 Nicira, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2068,6 +2068,7 @@ parse_flow_put(struct dpif_netlink *dpif, struct dpif_flow_put *put)
         VLOG_DBG("added flow");
     } else if (err != EEXIST) {
         struct netdev *oor_netdev = NULL;
+        enum vlog_level level;
         if (err == ENOSPC && netdev_is_offload_rebalance_policy_enabled()) {
             /*
              * We need to set OOR on the input netdev (i.e, 'dev') for the
@@ -2082,8 +2083,10 @@ parse_flow_put(struct dpif_netlink *dpif, struct dpif_flow_put *put)
             }
             netdev_set_hw_info(oor_netdev, HW_INFO_TYPE_OOR, true);
         }
-        VLOG_ERR_RL(&rl, "failed to offload flow: %s: %s", ovs_strerror(err),
-                    (oor_netdev ? oor_netdev->name : dev->name));
+        level = (err == ENOSPC || err == EOPNOTSUPP) ? VLL_DBG : VLL_ERR;
+        VLOG_RL(&rl, level, "failed to offload flow: %s: %s",
+                ovs_strerror(err),
+                (oor_netdev ? oor_netdev->name : dev->name));
     }
 
 out:
@@ -2884,7 +2887,7 @@ dpif_netlink_ct_set_limits(struct dpif *dpif OVS_UNUSED,
     nl_msg_end_nested(request, opt_offset);
 
     int err = nl_transact(NETLINK_GENERIC, request, NULL);
-    ofpbuf_uninit(request);
+    ofpbuf_delete(request);
     return err;
 }
 
@@ -2984,8 +2987,8 @@ dpif_netlink_ct_get_limits(struct dpif *dpif OVS_UNUSED,
                                                zone_limits_reply);
 
 out:
-    ofpbuf_uninit(request);
-    ofpbuf_uninit(reply);
+    ofpbuf_delete(request);
+    ofpbuf_delete(reply);
     return err;
 }
 
@@ -3021,7 +3024,7 @@ dpif_netlink_ct_del_limits(struct dpif *dpif OVS_UNUSED,
 
     int err = nl_transact(NETLINK_GENERIC, request, NULL);
 
-    ofpbuf_uninit(request);
+    ofpbuf_delete(request);
     return err;
 }
 
@@ -3429,6 +3432,13 @@ const struct dpif_class dpif_netlink_class = {
     dpif_netlink_ct_set_limits,
     dpif_netlink_ct_get_limits,
     dpif_netlink_ct_del_limits,
+    NULL,                       /* ipf_set_enabled */
+    NULL,                       /* ipf_set_min_frag */
+    NULL,                       /* ipf_set_max_nfrags */
+    NULL,                       /* ipf_get_status */
+    NULL,                       /* ipf_dump_start */
+    NULL,                       /* ipf_dump_next */
+    NULL,                       /* ipf_dump_done */
     dpif_netlink_meter_get_features,
     dpif_netlink_meter_set,
     dpif_netlink_meter_get,
@@ -3925,7 +3935,7 @@ put_exclude_packet_type(struct ofpbuf *buf, uint16_t type,
             ovs_be16 pt = pt_ns_type_be(nl_attr_get_be32(packet_type));
             const struct nlattr *nla;
 
-            nla = nl_attr_find(buf, NLA_HDRLEN, OVS_KEY_ATTR_ETHERTYPE);
+            nla = nl_attr_find(buf, ofs + NLA_HDRLEN, OVS_KEY_ATTR_ETHERTYPE);
             if (nla) {
                 ovs_be16 *ethertype;
 

@@ -62,7 +62,7 @@ BuildRequires: python3-devel
 BuildRequires: desktop-file-utils
 BuildRequires: groff graphviz
 BuildRequires: checkpolicy, selinux-policy-devel
-BuildRequires: %{_py2}-sphinx
+BuildRequires: /usr/bin/sphinx-build
 # make check dependencies
 BuildRequires: %{_py2}-twisted%{?rhel:-core} %{_py2}-zope-interface %{_py2}-six
 BuildRequires: procps-ng
@@ -212,6 +212,8 @@ rm -rf $RPM_BUILD_ROOT%{_sysconfdir}/logrotate.d/openvswitch
 
 %check
 %if %{with check}
+    touch resolv.conf
+    export OVS_RESOLV_CONF=$(pwd)/resolv.conf
     if make check TESTSUITEFLAGS='%{_smp_mflags}' RECHECK=yes; then :;
     else
         cat tests/testsuite.log

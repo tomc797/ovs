@@ -1,4 +1,4 @@
-# Copyright (C) 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017 Nicira, Inc.
+# Copyright (C) 2009-2018 Nicira, Inc.
 #
 # Copying and distribution of this file, with or without modification,
 # are permitted in any medium without royalty provided the copyright
@@ -108,6 +108,8 @@ lib_libopenvswitch_la_SOURCES = \
 	lib/hmapx.h \
 	lib/id-pool.c \
 	lib/id-pool.h \
+	lib/ipf.c \
+	lib/ipf.h \
 	lib/jhash.c \
 	lib/jhash.h \
 	lib/json.c \
@@ -136,6 +138,7 @@ lib_libopenvswitch_la_SOURCES = \
 	lib/netdev-dpdk.h \
 	lib/netdev-dummy.c \
 	lib/netdev-provider.h \
+	lib/netdev-rte-offloads.h \
 	lib/netdev-vport.c \
 	lib/netdev-vport.h \
 	lib/netdev-vport-private.h \
@@ -409,7 +412,8 @@ endif
 if DPDK_NETDEV
 lib_libopenvswitch_la_SOURCES += \
 	lib/dpdk.c \
-	lib/netdev-dpdk.c
+	lib/netdev-dpdk.c \
+	lib/netdev-rte-offloads.c
 else
 lib_libopenvswitch_la_SOURCES += \
 	lib/dpdk-stub.c
