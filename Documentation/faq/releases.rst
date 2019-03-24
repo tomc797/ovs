@@ -68,6 +68,7 @@ Q: What Linux kernel versions does each Open vSwitch release work with?
     2.8.x        3.10 to 4.12
     2.9.x        3.10 to 4.13
     2.10.x       3.10 to 4.17
+    2.11.x       3.10 to 4.18
     ============ ==============
 
     Open vSwitch userspace should also work with the Linux kernel module built
@@ -104,31 +105,32 @@ Q: Are all features available with all datapaths?
     The following table lists the datapath supported features from an Open
     vSwitch user's perspective.
 
-    ===================== ============== ============== ========= =======
-    Feature               Linux upstream Linux OVS tree Userspace Hyper-V
-    ===================== ============== ============== ========= =======
-    NAT                   4.6            YES            Yes       NO
-    Connection tracking   4.3            YES            PARTIAL   PARTIAL
-    Tunnel - LISP         NO             YES            NO        NO
-    Tunnel - STT          NO             YES            NO        YES
-    Tunnel - GRE          3.11           YES            YES       YES
-    Tunnel - VXLAN        3.12           YES            YES       YES
-    Tunnel - Geneve       3.18           YES            YES       YES
-    Tunnel - GRE-IPv6     4.18           YES            YES       NO
-    Tunnel - VXLAN-IPv6   4.3            YES            YES       NO
-    Tunnel - Geneve-IPv6  4.4            YES            YES       NO
-    Tunnel - ERSPAN       4.18           YES            YES       NO
-    Tunnel - ERSPAN-IPv6  4.18           YES            YES       NO
-    QoS - Policing        YES            YES            YES       NO
-    QoS - Shaping         YES            YES            NO        NO
-    sFlow                 YES            YES            YES       NO
-    IPFIX                 3.10           YES            YES       NO
-    Set action            YES            YES            YES       PARTIAL
-    NIC Bonding           YES            YES            YES       YES
-    Multiple VTEPs        YES            YES            YES       YES
-    Meters                4.15           YES            YES       NO
-    Conntrack zone limit  4.18           YES            NO        NO
-    ===================== ============== ============== ========= =======
+    ========================== ============== ============== ========= =======
+    Feature                    Linux upstream Linux OVS tree Userspace Hyper-V
+    ========================== ============== ============== ========= =======
+    Connection tracking             4.3            YES          YES      YES
+    Conntrack Fragment Reass.       4.3            YES          YES      YES
+    NAT                             4.6            YES          YES      YES
+    Conntrack zone limit            4.18           YES          NO       YES
+    Tunnel - LISP                   NO             YES          NO       NO
+    Tunnel - STT                    NO             YES          NO       YES
+    Tunnel - GRE                    3.11           YES          YES      YES
+    Tunnel - VXLAN                  3.12           YES          YES      YES
+    Tunnel - Geneve                 3.18           YES          YES      YES
+    Tunnel - GRE-IPv6               4.18           YES          YES      NO
+    Tunnel - VXLAN-IPv6             4.3            YES          YES      NO
+    Tunnel - Geneve-IPv6            4.4            YES          YES      NO
+    Tunnel - ERSPAN                 4.18           YES          YES      NO
+    Tunnel - ERSPAN-IPv6            4.18           YES          YES      NO
+    QoS - Policing                  YES            YES          YES      NO
+    QoS - Shaping                   YES            YES          NO       NO
+    sFlow                           YES            YES          YES      NO
+    IPFIX                           3.10           YES          YES      YES
+    Set action                      YES            YES          YES    PARTIAL
+    NIC Bonding                     YES            YES          YES      YES
+    Multiple VTEPs                  YES            YES          YES      YES
+    Meters                          4.15           YES          YES      NO
+    ========================== ============== ============== ========= =======
 
     Do note, however:
 
@@ -175,6 +177,7 @@ Q: What DPDK version does each Open vSwitch release work with?
     2.8.x        17.05.2
     2.9.x        17.11.4
     2.10.x       17.11.4
+    2.11.x       18.11
     ============ =======
 
 Q: Are all the DPDK releases that OVS versions work with maintained?

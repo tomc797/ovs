@@ -1104,12 +1104,12 @@ put_arp(inport, arp.spa, arp.sha);
 # put_dhcp_opts
 reg1[0] = put_dhcp_opts(offerip = 1.2.3.4, router = 10.0.0.1);
     encodes as controller(userdata=00.00.00.02.00.00.00.00.00.01.de.10.00.00.00.40.01.02.03.04.03.04.0a.00.00.01,pause)
-reg2[5] = put_dhcp_opts(offerip=10.0.0.4,router=10.0.0.1,netmask=255.255.254.0,mtu=1400,domain="ovn.org",wpad="https://example.org",bootfile_name="https://127.0.0.1/boot.ipxe");
-    formats as reg2[5] = put_dhcp_opts(offerip = 10.0.0.4, router = 10.0.0.1, netmask = 255.255.254.0, mtu = 1400, domain = "ovn.org", wpad = "https://example.org", bootfile_name = "https://127.0.0.1/boot.ipxe");
-    encodes as controller(userdata=00.00.00.02.00.00.00.00.00.01.de.10.00.00.00.25.0a.00.00.04.03.04.0a.00.00.01.01.04.ff.ff.fe.00.1a.02.05.78.0f.07.6f.76.6e.2e.6f.72.67.fc.13.68.74.74.70.73.3a.2f.2f.65.78.61.6d.70.6c.65.2e.6f.72.67.43.1b.68.74.74.70.73.3a.2f.2f.31.32.37.2e.30.2e.30.2e.31.2f.62.6f.6f.74.2e.69.70.78.65,pause)
-reg0[15] = put_dhcp_opts(offerip=10.0.0.4,router=10.0.0.1,netmask=255.255.255.0,mtu=1400,ip_forward_enable=1,default_ttl=121,dns_server={8.8.8.8,7.7.7.7},classless_static_route={30.0.0.0/24,10.0.0.4,40.0.0.0/16,10.0.0.6,0.0.0.0/0,10.0.0.1},ethernet_encap=1,router_discovery=0);
-    formats as reg0[15] = put_dhcp_opts(offerip = 10.0.0.4, router = 10.0.0.1, netmask = 255.255.255.0, mtu = 1400, ip_forward_enable = 1, default_ttl = 121, dns_server = {8.8.8.8, 7.7.7.7}, classless_static_route = {30.0.0.0/24, 10.0.0.4, 40.0.0.0/16, 10.0.0.6, 0.0.0.0/0, 10.0.0.1}, ethernet_encap = 1, router_discovery = 0);
-    encodes as controller(userdata=00.00.00.02.00.00.00.00.00.01.de.10.00.00.00.6f.0a.00.00.04.03.04.0a.00.00.01.01.04.ff.ff.ff.00.1a.02.05.78.13.01.01.17.01.79.06.08.08.08.08.08.07.07.07.07.79.14.18.1e.00.00.0a.00.00.04.10.28.00.0a.00.00.06.00.0a.00.00.01.24.01.01.1f.01.00,pause)
+reg2[5] = put_dhcp_opts(offerip=10.0.0.4,router=10.0.0.1,netmask=255.255.254.0,mtu=1400,domain="ovn.org",wpad="https://example.org",bootfile_name="https://127.0.0.1/boot.ipxe",path_prefix="/tftpboot");
+    formats as reg2[5] = put_dhcp_opts(offerip = 10.0.0.4, router = 10.0.0.1, netmask = 255.255.254.0, mtu = 1400, domain = "ovn.org", wpad = "https://example.org", bootfile_name = "https://127.0.0.1/boot.ipxe", path_prefix = "/tftpboot");
+    encodes as controller(userdata=00.00.00.02.00.00.00.00.00.01.de.10.00.00.00.25.0a.00.00.04.03.04.0a.00.00.01.01.04.ff.ff.fe.00.1a.02.05.78.0f.07.6f.76.6e.2e.6f.72.67.fc.13.68.74.74.70.73.3a.2f.2f.65.78.61.6d.70.6c.65.2e.6f.72.67.43.1b.68.74.74.70.73.3a.2f.2f.31.32.37.2e.30.2e.30.2e.31.2f.62.6f.6f.74.2e.69.70.78.65.d2.09.2f.74.66.74.70.62.6f.6f.74,pause)
+reg0[15] = put_dhcp_opts(offerip=10.0.0.4,router=10.0.0.1,netmask=255.255.255.0,mtu=1400,ip_forward_enable=1,default_ttl=121,dns_server={8.8.8.8,7.7.7.7},classless_static_route={30.0.0.0/24,10.0.0.4,40.0.0.0/16,10.0.0.6,0.0.0.0/0,10.0.0.1},ethernet_encap=1,router_discovery=0,tftp_server_address={10.0.0.4,10.0.0.5});
+    formats as reg0[15] = put_dhcp_opts(offerip = 10.0.0.4, router = 10.0.0.1, netmask = 255.255.255.0, mtu = 1400, ip_forward_enable = 1, default_ttl = 121, dns_server = {8.8.8.8, 7.7.7.7}, classless_static_route = {30.0.0.0/24, 10.0.0.4, 40.0.0.0/16, 10.0.0.6, 0.0.0.0/0, 10.0.0.1}, ethernet_encap = 1, router_discovery = 0, tftp_server_address = {10.0.0.4, 10.0.0.5});
+    encodes as controller(userdata=00.00.00.02.00.00.00.00.00.01.de.10.00.00.00.6f.0a.00.00.04.03.04.0a.00.00.01.01.04.ff.ff.ff.00.1a.02.05.78.13.01.01.17.01.79.06.08.08.08.08.08.07.07.07.07.79.14.18.1e.00.00.0a.00.00.04.10.28.00.0a.00.00.06.00.0a.00.00.01.24.01.01.1f.01.00.96.08.0a.00.00.04.0a.00.00.05,pause)
 
 reg1[0..1] = put_dhcp_opts(offerip = 1.2.3.4, router = 10.0.0.1);
     Cannot use 2-bit field reg1[0..1] where 1-bit field is required.
@@ -1626,6 +1626,186 @@ for i in 1 2 3; do
 done
 
 OVN_CLEANUP([hv1],[hv2],[hv3])
+
+AT_CLEANUP
+
+# 2 hypervisors, one logical switch, 2 logical ports per hypervisor
+# logical ports bound to chassis encap-ip.
+AT_SETUP([ovn -- 2 HVs, 1 LS, 2 lports/HV])
+AT_KEYWORDS([ovnarp])
+AT_SKIP_IF([test $HAVE_PYTHON = no])
+ovn_start
+
+# Create hypervisors hv[12].
+# Add vif1[12] to hv1, vif2[12] to hv2
+ovn-nbctl ls-add lsw0
+net_add n1
+for i in 1 2; do
+    sim_add hv$i
+    as hv$i
+    ovs-vsctl add-br br-phys
+    ovn_attach n1 br-phys 192.168.0.$i
+
+    for j in 1 2; do
+        ovs-vsctl add-port br-int vif$i$j -- set Interface vif$i$j external-ids:iface-id=lp$i$j options:tx_pcap=hv$i/vif$i$j-tx.pcap options:rxq_pcap=hv$i/vif$i$j-rx.pcap ofport-request=$i$j
+        ovn-nbctl lsp-add lsw0 lp$i$j
+        ip_addrs="192.168.0.$i$j"
+        ovn-nbctl lsp-set-addresses lp$i$j "f0:00:00:00:00:$i$j $ip_addrs"
+        ovn-nbctl lsp-set-port-security lp$i$j f0:00:00:00:00:$i$j
+    done
+done
+
+get_lsp_uuid () {
+    ovn-nbctl lsp-list lsw0 | grep $1 | awk '{ print $1 }'
+}
+
+# XXX-Check how to pass lp$i1 in AT_CHECK_UNQUOTED, for now just do it
+# explictly
+
+# For Chassis hv1
+AT_CHECK_UNQUOTED([ovn-sbctl  --column encap list port_binding lp11], [0], [dnl
+encap               : [[]]
+])
+AT_CHECK_UNQUOTED([ovn-sbctl  --column encap list port_binding lp12], [0], [dnl
+encap               : [[]]
+])
+
+# For Chassis hv2
+AT_CHECK_UNQUOTED([ovn-sbctl  --column encap list port_binding lp21], [0], [dnl
+encap               : [[]]
+])
+AT_CHECK_UNQUOTED([ovn-sbctl  --column encap list port_binding lp22], [0], [dnl
+encap               : [[]]
+])
+
+# Bind the ports to the encap-ip
+for i in 1 2; do
+    for j in 1 2; do
+        as hv$i
+        ovs-vsctl set Interface vif$i$j external-ids:encap-ip=192.168.0.$i
+    done
+done
+
+sleep 1
+
+# dump port bindings; since we have vxlan and geneve tunnels, we expect the
+# ports to be bound to geneve tunnels.
+
+# For Chassis 1
+encap_rec=`ovn-sbctl --data=bare --no-heading --column _uuid find encap chassis_name=hv1 type=geneve ip=192.168.0.1`
+
+AT_CHECK_UNQUOTED([ovn-sbctl  --column encap list port_binding lp11], [0], [dnl
+encap               : ${encap_rec}
+])
+
+AT_CHECK_UNQUOTED([ovn-sbctl  --column encap list port_binding lp12], [0], [dnl
+encap               : ${encap_rec}
+])
+
+# For Chassis 2
+encap_rec=`ovn-sbctl --data=bare --no-heading --column _uuid find encap chassis_name=hv2 type=geneve ip=192.168.0.2`
+
+AT_CHECK_UNQUOTED([ovn-sbctl  --column encap list port_binding lp21], [0], [dnl
+encap               : ${encap_rec}
+])
+
+AT_CHECK_UNQUOTED([ovn-sbctl  --column encap list port_binding lp22], [0], [dnl
+encap               : ${encap_rec}
+])
+
+# Pre-populate the hypervisors' ARP tables so that we don't lose any
+# packets for ARP resolution (native tunneling doesn't queue packets
+# for ARP resolution).
+OVN_POPULATE_ARP
+
+# Allow some time for ovn-northd and ovn-controller to catch up.
+# XXX This should be more systematic.
+sleep 1
+
+# Make sure there is no attempt to adding duplicated flows by ovn-controller
+AT_FAIL_IF([test -n "`grep duplicate hv1/ovn-controller.log`"])
+AT_FAIL_IF([test -n "`grep duplicate hv2/ovn-controller.log`"])
+AT_FAIL_IF([test -n "`grep duplicate hv3/ovn-controller.log`"])
+
+# Given the name of a logical port, prints the name of the hypervisor
+# on which it is located.
+vif_to_hv() {
+    echo hv${1%?}
+}
+
+# test_packet INPORT DST SRC ETHTYPE OUTPORT...
+#
+# This shell function causes a packet to be received on INPORT.  The packet's
+# content has Ethernet destination DST and source SRC (each exactly 12 hex
+# digits) and Ethernet type ETHTYPE (4 hex digits).  The OUTPORTs (zero or
+# more) list the VIFs on which the packet should be received.  INPORT and the
+# OUTPORTs are specified as logical switch port numbers, e.g. 11 for vif11.
+for i in 1 2; do
+    for j in 1 2; do
+        : > $i$j.expected
+    done
+done
+test_packet() {
+    local inport=$1 packet=$2$3$4; shift; shift; shift; shift
+    hv=`vif_to_hv $inport`
+    vif=vif$inport
+    as $hv ovs-appctl netdev-dummy/receive $vif $packet
+    for outport; do
+        echo $packet >> $outport.expected
+    done
+}
+
+ip_to_hex() {
+    printf "%02x%02x%02x%02x" "$@"
+}
+
+# Send packets between all pairs of source and destination ports:
+#
+# 1. Unicast packets are delivered to exactly one logical switch port
+#    (except that packets destined to their input ports are dropped).
+
+for is in 1 2; do
+    for js in 1 2; do
+        s=$is$js
+        bcast=
+        unknown=
+        bacl2=
+        bacl3=
+        for id in 1 2 3; do
+            for jd in 1 2 3; do
+                d=$id$jd
+
+                if test $d != $s; then unicast=$d; else unicast=; fi
+                test_packet $s f000000000$d f000000000$s $s$d $unicast     #1
+            done
+        done
+
+    done
+done
+
+# dump information and flows with counters
+ovn-sbctl dump-flows -- list multicast_group
+
+echo "------ hv1 dump ------"
+as hv1 ovs-vsctl show
+as hv1 ovs-ofctl -O OpenFlow13 dump-flows br-int
+
+echo "------ hv2 dump ------"
+as hv2 ovs-vsctl show
+as hv2 ovs-ofctl -O OpenFlow13 dump-flows br-int
+
+echo "------ hv3 dump ------"
+as hv3 ovs-vsctl show
+as hv3 ovs-ofctl -O OpenFlow13 dump-flows br-int
+
+# Now check the packets actually received against the ones expected.
+for i in 1 2; do
+    for j in 1 2; do
+        OVN_CHECK_PACKETS([hv$i/vif$i$j-tx.pcap], [$i$j.expected])
+    done
+done
+
+OVN_CLEANUP([hv1],[hv2])
 
 AT_CLEANUP
 
@@ -5416,6 +5596,7 @@ ovn_start
 
 # Add a port to a switch that does not have a subnet set, then set the
 # subnet which should result in an address being allocated for the port.
+ovn-nbctl --wait=hv set NB_Global . options:mac_prefix="0a:00:00:00:00:00"
 ovn-nbctl ls-add sw0
 ovn-nbctl lsp-add sw0 p0 -- lsp-set-addresses p0 dynamic
 ovn-nbctl --wait=sb add Logical-Switch sw0 other_config subnet=192.168.1.0/24
@@ -5783,6 +5964,16 @@ AT_CHECK([ovn-nbctl get Logical-Switch-Port p83 dynamic_addresses], [0],
     ["00:11:22:00:00:08"
 ])
 
+# clear mac_prefix and check it is allocated in a random manner
+ovn-nbctl --wait=hv remove NB_Global . options mac_prefix
+ovn-nbctl ls-add sw9
+ovn-nbctl --wait=sb set Logical-Switch sw9 other_config:mac_only=true
+ovn-nbctl --wait=sb lsp-add sw9 p91 -- lsp-set-addresses p91 dynamic
+
+mac_prefix=$(ovn-nbctl --wait=sb get NB_Global . options:mac_prefix | tr -d \")
+port_addr=$(ovn-nbctl get Logical-Switch-Port p91 dynamic_addresses | tr -d \")
+AT_CHECK([test "$port_addr" = "${mac_prefix}:00:00:09"], [0], [])
+
 as ovn-sb
 OVS_APP_EXIT_AND_WAIT([ovsdb-server])
 
@@ -5801,6 +5992,7 @@ ovn_start
 ovn-nbctl lr-add R1
 
 # Test for a ping using dynamically allocated addresses.
+ovn-nbctl --wait=hv set NB_Global . options:mac_prefix="0a:00:00:00:00:00"
 ovn-nbctl ls-add foo -- add Logical_Switch foo other_config subnet=192.168.1.0/24
 ovn-nbctl ls-add alice -- add Logical_Switch alice other_config subnet=192.168.2.0/24
 
@@ -7989,6 +8181,7 @@ test_ip_packet()
 {
     local active_gw=$1
     local backup_gw=$2
+    local backup_vswitchd_dead=$3
 
     # Send ip packet between foo1 and outside1
     src_mac="f00000010203" # foo1 mac
@@ -8027,7 +8220,11 @@ grep actions=mod_dl_dst:f0:00:00:01:02:04 | wc -l` -eq 1
     echo $expected > ext1-vif1.expected
 
     as $active_gw reset_pcap_file br-phys_n1 $active_gw/br-phys_n1
-    as $backup_gw reset_pcap_file br-phys_n1 $backup_gw/br-phys_n1
+
+    if test $backup_vswitchd_dead != 1; then
+        # Reset the file only if vswitchd in backup gw is alive
+        as $backup_gw reset_pcap_file br-phys_n1 $backup_gw/br-phys_n1
+    fi
     as ext1 reset_pcap_file ext1-vif1 ext1/vif1
 
     # Resend packet from foo1 to outside1
@@ -8038,11 +8235,14 @@ grep actions=mod_dl_dst:f0:00:00:01:02:04 | wc -l` -eq 1
     OVN_CHECK_PACKETS([ext1/vif1-tx.pcap], [ext1-vif1.expected])
     $PYTHON "$top_srcdir/utilities/ovs-pcap.in" $active_gw/br-phys_n1-tx.pcap  > packets
     AT_CHECK([grep $expected packets | sort], [0], [expout])
-    $PYTHON "$top_srcdir/utilities/ovs-pcap.in" $backup_gw/br-phys_n1-tx.pcap  > packets
-    AT_CHECK([grep $expected packets | sort], [0], [])
+    if test $backup_vswitchd_dead != 1; then
+        # Check for backup gw only if vswitchd is alive
+        $PYTHON "$top_srcdir/utilities/ovs-pcap.in" $backup_gw/br-phys_n1-tx.pcap  > packets
+        AT_CHECK([grep $expected packets | sort], [0], [])
+    fi
 }
 
-test_ip_packet gw1 gw2
+test_ip_packet gw1 gw2 0
 
 ovn-nbctl --timeout=3 --wait=hv \
     --id=@gc0 create Gateway_Chassis name=alice_gw1 \
@@ -8053,9 +8253,34 @@ ovn-nbctl --timeout=3 --wait=hv \
                                      priority=20 -- \
     set Logical_Router_Port alice 'gateway_chassis=[@gc0,@gc1]'
 
-test_ip_packet gw2 gw1
+test_ip_packet gw2 gw1 0
 
-OVN_CLEANUP([hv1],[gw1],[gw2],[ext1])
+# Get the claim count of both gw1 and gw2.
+gw1_claim_ct=`grep "cr-alice: Claiming" gw1/ovn-controller.log | wc -l`
+gw2_claim_ct=`grep "cr-alice: Claiming" gw2/ovn-controller.log | wc -l`
+
+# Stop ovs-vswitchd in gw2. gw1 should claim the gateway port.
+as gw2
+OVS_APP_EXIT_AND_WAIT([ovs-vswitchd])
+
+# gw1 should claim the cr-alice and the claim count of gw1 should be
+# incremented by 1.
+gw1_claim_ct=$((gw1_claim_ct+1))
+
+OVS_WAIT_UNTIL([test $gw1_claim_ct = `cat gw1/ovn-controller.log \
+| grep -c "cr-alice: Claiming"`])
+
+AT_CHECK([test $gw2_claim_ct = `cat gw2/ovn-controller.log | \
+grep -c "cr-alice: Claiming"`])
+
+test_ip_packet gw1 gw2 1
+
+as gw2
+OVS_APP_EXIT_AND_WAIT([ovn-controller])
+OVS_APP_EXIT_AND_WAIT([ovsdb-server])
+
+OVN_CLEANUP([hv1],[gw1],[ext1])
+
 AT_CLEANUP
 
 AT_SETUP([ovn -- 4 HV, 3 LS, 2 LR, packet test with HA distributed router gateway port])
@@ -12019,6 +12244,7 @@ AT_CLEANUP
 AT_SETUP([ovn -- ipam to non-ipam])
 ovn_start
 
+ovn-nbctl --wait=hv set NB_Global . options:mac_prefix="0a:00:00:00:00:00"
 ovn-nbctl ls-add sw0
 ovn-nbctl lsp-add sw0 p0 -- lsp-set-addresses p0 dynamic
 ovn-nbctl --wait=sb add Logical-Switch sw0 other_config subnet=192.168.1.0/24
