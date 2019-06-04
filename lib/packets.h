@@ -407,6 +407,7 @@ ovs_be32 set_mpls_lse_values(uint8_t ttl, uint8_t tc, uint8_t bos,
 #define ETH_TYPE_NSH           0x894f
 #define ETH_TYPE_ERSPAN1       0x88be   /* version 1 type II */
 #define ETH_TYPE_ERSPAN2       0x22eb   /* version 2 type III */
+#define ETH_TYPE_CISCO_METADATA 0x8909 /* CMD contains a SGT option */
 
 static inline bool eth_type_mpls(ovs_be16 eth_type)
 {
@@ -1595,5 +1596,73 @@ BUILD_ASSERT_DECL(DNS_HEADER_LEN == sizeof(struct dns_header));
 
 #define DNS_CLASS_IN            0x01
 #define DNS_DEFAULT_RR_TTL      3600
+
+
+/**
+ * Cisco Meta Data
+ * 
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-++-+-+-+-+-+-+-+-+-+
+ *  | | | | | | | | | | |1|1|1|1|1|1|1|1|1|1|2|2|2|2|2|2|2|2|2|2|3|3|
+ *  |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-++-+-+-+-+-+-+-+-+-+
+ *  |  Metadata Ethertype = 0x8909  |  Version = 1  |     Length    |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-++-+-+-+-+-+-+-+-+-+
+ *  |                 Metadata Payload (4-12 bytes)                 |
+ *  +                                                               +
+ *  |                            ...                                |
+ *  +                            ...                                +
+ *  |                                                               |
+ *  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-++-+-+-+-+-+-+-+-+-+
+ */
+
+/**
+ * Metadata Payload
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-++-+-+-+-+-+-+-+-+-+
+ * | | | | | | | | | | |1|1|1|1|1|1|1|1|1|1|2|2|2|2|2|2|2|2|2|2|3|3|
+ * |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-++-+-+-+-+-+-+-+-+-+
+ * |  Len  |      Option Type      |                               |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                               +
+ * |                          Value (2-6 bytes)                    |
+ * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-++-+-+-+-+-+-+-+-+-+
+ */
+
+/**
+ * Scalable Group Tag Option
+ * Len = 0, Option Type = 0x00001
+ * 
+ */
+#define ETH_TYPE_CISCO_META		      0x8909 /* Cisco Meta Data */
+#define CISCO_META_HEADER_LEN       (8u)
+#define ETH_CISCO_META_HEADER_LEN   (ETH_HEADER_LEN+CISCO_META_HEADER_LEN)
+
+static inline bool eth_type_cisco_meta(ovs_be16 eth_type)
+{
+  return eth_type == htons(ETH_TYPE_CISCO_META);
+}
+
+struct cisco_meta_header
+{
+    uint8_t meta_ver;
+    uint8_t meta_len;
+    ovs_be16 meta_option;
+    ovs_be16 meta_sgt;
+    ovs_be16 meta_next_type;
+};
+
+struct eth_cisco_meta_header
+{
+    struct eth_addr eth_dst;
+    struct eth_addr eth_src;
+    ovs_be16 eth_type;
+    uint8_t meta_ver;
+    uint8_t meta_len;
+    ovs_be16 meta_option;
+    ovs_be16 meta_sgt;
+    ovs_be16 meta_next_type;
+};
+
+_Static_assert(sizeof(struct cisco_meta_header) == CISCO_META_HEADER_LEN, "struct cisco_meta_header has unintended padding");
+_Static_assert(sizeof(struct eth_cisco_meta_header) == ETH_CISCO_META_HEADER_LEN, "struct eth_cisco_meta_header has unintended padding");
 
 #endif /* packets.h */

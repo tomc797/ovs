@@ -1377,7 +1377,7 @@ match_format(const struct match *match,
     bool is_megaflow = false;
     int i;
 
-    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 41);
+    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 1041);
 
     if (priority != OFP_DEFAULT_PRIORITY) {
         ds_put_format(s, "%spriority=%s%d,",
@@ -1584,6 +1584,9 @@ match_format(const struct match *match,
         ds_put_format(s, "%sdl_type=%s0x%04"PRIx16",",
                       colors.param, colors.end, ntohs(dl_type));
     }
+
+    format_be16_masked(s, "sgt", f->sgt_tag, wc->masks.sgt_tag);
+
     if (dl_type == htons(ETH_TYPE_IPV6)) {
         format_ipv6_netmask(s, "ipv6_src", &f->ipv6_src, &wc->masks.ipv6_src);
         format_ipv6_netmask(s, "ipv6_dst", &f->ipv6_dst, &wc->masks.ipv6_dst);
