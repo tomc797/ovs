@@ -1206,6 +1206,24 @@ enum OVS_PACKED_ENUM mf_field_id {
      */
     MFF_VLAN_PCP,
 
+/* ## --- ## */
+/* ## SGT ## */
+/* ## --- ## */
+
+    /* "sgt".
+     *
+     * Scalable Group Tag
+     *
+     * Type: be16.
+     * Maskable: no.
+     * Formatting: decimal.
+     * Prerequisites: Ethernet.
+     * Access: read/write.
+     * NXM: none.
+     * OXM: TOMC_ET_SGT_TAG(1) since v2.11.
+     */
+    MFF_CMD_SGT_TAG,
+
 /* ## ---- ## */
 /* ## MPLS ## */
 /* ## ---- ## */

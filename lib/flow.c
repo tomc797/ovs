@@ -781,12 +781,42 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             size_t num_vlans = parse_vlan(&data, &size, vlans);
 
             dl_type = parse_ethertype(&data, &size);
+
+            /** 
+             * Parse scalable group tag, contained in Cisco Meta Data
+             */
+            ovs_be16 sgt_tag = 0;
+            if (OVS_UNLIKELY(eth_type_cisco_meta(dl_type))) {
+                const struct cisco_meta_header *meta = data;
+
+                /* Parse Cisco Metdata header */
+                if (OVS_LIKELY(size >= CISCO_META_HEADER_LEN
+                               && meta->meta_ver == 0x01
+                               && meta->meta_len >= 1u)) {
+                    /**
+                     * If SGT option exists, parse.
+                     */
+                     if (OVS_LIKELY(meta->meta_option == htons(0x0001))) {
+                         sgt_tag = meta->meta_sgt;
+                     }
+
+                    if (OVS_LIKELY(meta->meta_len == 1u
+                                   && meta->meta_option == htons(0x0001))) {
+                        dl_type = meta->meta_next_type;
+                        data_pull(&data, &size, CISCO_META_HEADER_LEN);
+                    }
+                }
+            }
+
             miniflow_push_be16(mf, dl_type, dl_type);
             miniflow_pad_to_64(mf, dl_type);
             if (num_vlans > 0) {
                 miniflow_push_words_32(mf, vlans, vlans, num_vlans);
             }
 
+            /* Push SGT */
+            miniflow_push_be16(mf, sgt_tag, sgt_tag);
+            miniflow_pad_to_64(mf, sgt_tag);
         }
     } else {
         /* Take dl_type from packet_type. */
@@ -1128,7 +1158,7 @@ flow_get_metadata(const struct flow *flow, struct match *flow_metadata)
 {
     int i;
 
-    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 41);
+    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 1041);
 
     match_init_catchall(flow_metadata);
     if (flow->tunnel.tun_id != htonll(0)) {
@@ -1708,7 +1738,7 @@ flow_wildcards_init_for_packet(struct flow_wildcards *wc,
     memset(&wc->masks, 0x0, sizeof wc->masks);
 
     /* Update this function whenever struct flow changes. */
-    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 41);
+    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 1041);
 
     if (flow_tnl_dst_is_set(&flow->tunnel)) {
         if (flow->tunnel.flags & FLOW_TNL_F_KEY) {
@@ -1773,6 +1803,7 @@ flow_wildcards_init_for_packet(struct flow_wildcards *wc,
                 break;
             }
         }
+        WC_MASK_FIELD(wc, sgt_tag);
         dl_type = flow->dl_type;
     } else {
         dl_type = pt_ns_type_be(flow->packet_type);
@@ -1859,7 +1890,7 @@ void
 flow_wc_map(const struct flow *flow, struct flowmap *map)
 {
     /* Update this function whenever struct flow changes. */
-    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 41);
+    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 1041);
 
     flowmap_init(map);
 
@@ -1886,6 +1917,7 @@ flow_wc_map(const struct flow *flow, struct flowmap *map)
     FLOWMAP_SET(map, dl_src);
     FLOWMAP_SET(map, dl_type);
     FLOWMAP_SET(map, vlans);
+    FLOWMAP_SET(map, sgt_tag);
     FLOWMAP_SET(map, ct_state);
     FLOWMAP_SET(map, ct_zone);
     FLOWMAP_SET(map, ct_mark);
@@ -1960,7 +1992,7 @@ void
 flow_wildcards_clear_non_packet_fields(struct flow_wildcards *wc)
 {
     /* Update this function whenever struct flow changes. */
-    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 41);
+    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 1041);
 
     memset(&wc->masks.metadata, 0, sizeof wc->masks.metadata);
     memset(&wc->masks.regs, 0, sizeof wc->masks.regs);
@@ -2104,7 +2136,7 @@ flow_wildcards_set_xxreg_mask(struct flow_wildcards *wc, int idx,
 uint32_t
 miniflow_hash_5tuple(const struct miniflow *flow, uint32_t basis)
 {
-    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 41);
+    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 1041);
     uint32_t hash = basis;
 
     if (flow) {
@@ -2151,7 +2183,7 @@ ASSERT_SEQUENTIAL(ipv6_src, ipv6_dst);
 uint32_t
 flow_hash_5tuple(const struct flow *flow, uint32_t basis)
 {
-    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 41);
+    BUILD_ASSERT_DECL(FLOW_WC_SEQ == 1041);
     uint32_t hash = basis;
 
     if (flow) {
@@ -2824,7 +2856,7 @@ flow_push_mpls(struct flow *flow, int n, ovs_be16 mpls_eth_type,
 
         if (clear_flow_L3) {
             /* Clear all L3 and L4 fields and dp_hash. */
-            BUILD_ASSERT(FLOW_WC_SEQ == 41);
+            BUILD_ASSERT(FLOW_WC_SEQ == 1041);
             memset((char *) flow + FLOW_SEGMENT_2_ENDS_AT, 0,
                    sizeof(struct flow) - FLOW_SEGMENT_2_ENDS_AT);
             flow->dp_hash = 0;

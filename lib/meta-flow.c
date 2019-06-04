@@ -309,6 +309,9 @@ mf_is_all_wild(const struct mf_field *mf, const struct flow_wildcards *wc)
     case MFF_VLAN_PCP:
         return !(wc->masks.vlans[0].tci & htons(VLAN_PCP_MASK));
 
+    case MFF_CMD_SGT_TAG:
+        return !wc->masks.sgt_tag;
+
     case MFF_MPLS_LABEL:
         return !(wc->masks.mpls_lse[0] & htonl(MPLS_LABEL_MASK));
     case MFF_MPLS_TC:
@@ -547,6 +550,7 @@ mf_is_value_valid(const struct mf_field *mf, const union mf_value *value)
     case MFF_ETH_DST:
     case MFF_ETH_TYPE:
     case MFF_VLAN_TCI:
+    case MFF_CMD_SGT_TAG:
     case MFF_MPLS_TTL:
     case MFF_IPV4_SRC:
     case MFF_IPV4_DST:
@@ -812,6 +816,10 @@ mf_get_value(const struct mf_field *mf, const struct flow *flow,
     case MFF_DL_VLAN_PCP:
     case MFF_VLAN_PCP:
         value->u8 = vlan_tci_to_pcp(flow->vlans[0].tci);
+        break;
+
+    case MFF_CMD_SGT_TAG:
+        value->be16 = flow->sgt_tag;
         break;
 
     case MFF_MPLS_LABEL:
@@ -1145,6 +1153,11 @@ mf_set_value(const struct mf_field *mf,
     case MFF_DL_VLAN_PCP:
     case MFF_VLAN_PCP:
         match_set_dl_vlan_pcp(match, value->u8, 0);
+        break;
+
+    case MFF_CMD_SGT_TAG:
+        match->wc.masks.sgt_tag = OVS_BE16_MAX;
+        match->flow.sgt_tag = value->be16;
         break;
 
     case MFF_MPLS_LABEL:
@@ -1553,6 +1566,10 @@ mf_set_flow_value(const struct mf_field *mf,
         flow_fix_vlan_tpid(flow);
         break;
 
+    case MFF_CMD_SGT_TAG:
+        flow->sgt_tag = value->be16;
+        break;
+
     case MFF_MPLS_LABEL:
         flow_set_mpls_label(flow, 0, value->be32);
         break;
@@ -1789,6 +1806,7 @@ mf_is_pipeline_field(const struct mf_field *mf)
     case MFF_VLAN_VID:
     case MFF_DL_VLAN_PCP:
     case MFF_VLAN_PCP:
+    case MFF_CMD_SGT_TAG:
     case MFF_MPLS_LABEL:
     case MFF_MPLS_TC:
     case MFF_MPLS_BOS:
@@ -2066,6 +2084,11 @@ mf_set_wild(const struct mf_field *mf, struct match *match, char **err_str)
         match_set_any_pcp(match);
         break;
 
+    case MFF_CMD_SGT_TAG:
+        match->flow.sgt_tag = htons(0);
+        match->wc.masks.sgt_tag = htons(0);
+        break;
+
     case MFF_MPLS_LABEL:
         match_set_any_mpls_label(match, 0);
         break;
@@ -2271,6 +2294,7 @@ mf_set(const struct mf_field *mf,
     case MFF_DL_VLAN:
     case MFF_DL_VLAN_PCP:
     case MFF_VLAN_PCP:
+    case MFF_CMD_SGT_TAG:
     case MFF_MPLS_LABEL:
     case MFF_MPLS_TC:
     case MFF_MPLS_BOS:

@@ -3606,6 +3606,10 @@ r r c c c.
     </dl>
   </group>
 
+  <group title="Scalable Group Tag">
+    <field id="MFF_CMD_SGT_TAG" title="SGT"/>
+  </group>
+
   <group title="Layer 2.5: MPLS">
     <p>
       One or more MPLS headers (more commonly called <dfn>MPLS
