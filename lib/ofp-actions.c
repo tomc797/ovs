@@ -367,6 +367,9 @@ enum ofp_raw_action_type {
 
     /* NX1.0+(255): void. */
     NXAST_RAW_DEBUG_RECIRC,
+
+    /* NX1.0+(100): void. */
+    NXAST_RAW_STRIP_SGT,
 };
 
 /* OpenFlow actions are always a multiple of 8 bytes in length. */
@@ -492,6 +495,7 @@ ofpact_next_flattened(const struct ofpact *ofpact)
     case OFPACT_ENCAP:
     case OFPACT_DECAP:
     case OFPACT_DEC_NSH_TTL:
+    case OFPACT_STRIP_SGT:
         return ofpact_next(ofpact);
 
     case OFPACT_CLONE:
@@ -3721,6 +3725,44 @@ check_DEC_TTL(const struct ofpact_cnt_ids *a OVS_UNUSED,
     return check_set_ip(cp);
 }
 
+/* Scalable Group Tag */
+static enum ofperr
+decode_NXAST_RAW_STRIP_SGT(struct ofpbuf *out)
+{
+   ofpact_put_STRIP_SGT(out);
+   return 0;
+}
+
+static void
+encode_STRIP_SGT(const struct ofpact_null *null OVS_UNUSED,
+                 enum ofp_version ofp_version OVS_UNUSED,
+                 struct ofpbuf *out)
+{
+    put_NXAST_STRIP_SGT(out);
+}
+
+static enum ofperr
+check_STRIP_SGT(const struct ofpact_null *null OVS_UNUSED,
+                const struct ofpact_check_params *cp OVS_UNUSED)
+{
+    return 0;
+}
+
+static void
+format_STRIP_SGT(const struct ofpact_null *null OVS_UNUSED,
+                 const struct ofpact_format_params *fp)
+{
+    ds_put_format(fp->s, "%sstrip_sgt%s", colors.value, colors.end);
+}
+
+static char * OVS_WARN_UNUSED_RESULT
+parse_STRIP_SGT(char *arg OVS_UNUSED,
+                const struct ofpact_parse_params *pp)
+{ 
+  ofpact_put_STRIP_SGT(pp->ofpacts);
+  return NULL;
+}
+
 /* Set MPLS label actions. */
 
 static enum ofperr
@@ -7582,6 +7624,7 @@ ofpact_copy(struct ofpbuf *out, const struct ofpact *a)
 /* The order in which actions in an action set get executed.  This is only for
  * the actions where only the last instance added is used. */
 #define ACTION_SET_ORDER                        \
+    SLOT(OFPACT_STRIP_SGT)                      \
     SLOT(OFPACT_STRIP_VLAN)                     \
     SLOT(OFPACT_POP_MPLS)                       \
     SLOT(OFPACT_DECAP)                          \
@@ -7885,6 +7928,7 @@ ovs_instruction_type_from_ofpact_type(enum ofpact_type type)
     case OFPACT_ENCAP:
     case OFPACT_DECAP:
     case OFPACT_DEC_NSH_TTL:
+    case OFPACT_STRIP_SGT:
     default:
         return OVSINST_OFPIT11_APPLY_ACTIONS;
     }
@@ -8755,6 +8799,7 @@ ofpact_outputs_to_port(const struct ofpact *ofpact, ofp_port_t port)
     case OFPACT_ENCAP:
     case OFPACT_DECAP:
     case OFPACT_DEC_NSH_TTL:
+    case OFPACT_STRIP_SGT:
     default:
         return false;
     }
@@ -9428,4 +9473,3 @@ pad_ofpat(struct ofpbuf *openflow, size_t start_ofs)
     oah = ofpbuf_at_assert(openflow, start_ofs, sizeof *oah);
     oah->len = htons(openflow->size - start_ofs);
 }
-

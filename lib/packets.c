@@ -1700,3 +1700,12 @@ IP_ECN_set_ce(struct dp_packet *pkt, bool is_ipv6)
         }
     }
 }
+
+void
+eth_strip_sgt(struct dp_packet *packet)
+{
+  struct cisco_meta_eth_header *mh = dp_packet_eth(packet);
+  if (OVS_UNLIKELY(!mh || mh->eth_type != htons(0x8909)))
+      return;
+  mh->meta_sgt = htons(0x1234);
+}
