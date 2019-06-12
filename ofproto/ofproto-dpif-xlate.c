@@ -5565,6 +5565,7 @@ reversible_actions(const struct ofpact *ofpacts, size_t ofpacts_len)
         case OFPACT_UNROLL_XLATE:
         case OFPACT_WRITE_ACTIONS:
         case OFPACT_WRITE_METADATA:
+        case OFPACT_STRIP_SGT:
             break;
 
         case OFPACT_CT:
@@ -5873,6 +5874,7 @@ freeze_unroll_actions(const struct ofpact *a, const struct ofpact *end,
         case OFPACT_CT:
         case OFPACT_CT_CLEAR:
         case OFPACT_NAT:
+        case OFPACT_STRIP_SGT:
             /* These may not generate PACKET INs. */
             break;
 
@@ -6387,6 +6389,7 @@ recirc_for_mpls(const struct ofpact *a, struct xlate_ctx *ctx)
     case OFPACT_WRITE_ACTIONS:
     case OFPACT_WRITE_METADATA:
     case OFPACT_GOTO_TABLE:
+    case OFPACT_STRIP_SGT:
     default:
         break;
     }
@@ -6841,6 +6844,13 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
 
         case OFPACT_DEBUG_SLOW:
             ctx->xout->slow |= SLOW_ACTION;
+            break;
+
+        case OFPACT_STRIP_SGT:
+            if (wc) {
+              wc->masks.sgt_tag = htons(0xffff);
+            }
+            flow->sgt_tag = htons(0x0000);
             break;
         }
 

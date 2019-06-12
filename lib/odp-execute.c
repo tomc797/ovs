@@ -673,6 +673,7 @@ requires_datapath_assistance(const struct nlattr *a)
     case OVS_ACTION_ATTR_PUSH_NSH:
     case OVS_ACTION_ATTR_POP_NSH:
     case OVS_ACTION_ATTR_CT_CLEAR:
+    case OVS_ACTION_ATTR_STRIP_SGT:
         return false;
 
     case OVS_ACTION_ATTR_UNSPEC:
@@ -897,6 +898,12 @@ odp_execute_actions(void *dp, struct dp_packet_batch *batch, bool steal,
         case OVS_ACTION_ATTR_CT_CLEAR:
             DP_PACKET_BATCH_FOR_EACH (i, packet, batch) {
                 conntrack_clear(packet);
+            }
+            break;
+
+        case OVS_ACTION_ATTR_STRIP_SGT:
+            DP_PACKET_BATCH_FOR_EACH (i, packet, batch) {
+                eth_strip_sgt(packet);
             }
             break;
 

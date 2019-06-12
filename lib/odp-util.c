@@ -131,6 +131,7 @@ odp_action_len(uint16_t type)
     case OVS_ACTION_ATTR_CLONE: return ATTR_LEN_VARIABLE;
     case OVS_ACTION_ATTR_PUSH_NSH: return ATTR_LEN_VARIABLE;
     case OVS_ACTION_ATTR_POP_NSH: return 0;
+    case OVS_ACTION_ATTR_STRIP_SGT: return 0;
 
     case OVS_ACTION_ATTR_UNSPEC:
     case __OVS_ACTION_ATTR_MAX:
@@ -1180,6 +1181,9 @@ format_odp_action(struct ds *ds, const struct nlattr *a,
     }
     case OVS_ACTION_ATTR_POP_NSH:
         ds_put_cstr(ds, "pop_nsh()");
+        break;
+    case OVS_ACTION_ATTR_STRIP_SGT:
+        ds_put_cstr(ds, "strip_sgt");
         break;
     case OVS_ACTION_ATTR_UNSPEC:
     case __OVS_ACTION_ATTR_MAX:
@@ -7848,6 +7852,26 @@ commit_encap_decap_action(const struct flow *flow,
     wc->masks.packet_type = OVS_BE32_MAX;
 }
 
+static enum slow_path_reason
+commit_set_sgt_action(const struct flow *flow, struct flow *base,
+                      struct ofpbuf *odp_actions)
+{
+    if (flow->packet_type != htonl(PT_ETH)) {
+        return 0;
+    }
+
+    if (flow->sgt_tag == base->sgt_tag) {
+        return 0;
+    }
+
+    /**
+     * SGT are different; perform action
+     */
+    base->sgt_tag = flow->sgt_tag;
+    nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_STRIP_SGT);
+    return SLOW_ACTION;
+}
+
 /* If any of the flow key data that ODP actions can modify are different in
  * 'base' and 'flow', appends ODP actions to 'odp_actions' that change the flow
  * key from 'base' into 'flow', and then changes 'base' the same way.  Does not
@@ -7863,12 +7887,14 @@ commit_odp_actions(const struct flow *flow, struct flow *base,
                    bool use_masked, bool pending_encap, bool pending_decap,
                    struct ofpbuf *encap_data)
 {
-    enum slow_path_reason slow1, slow2;
+    enum slow_path_reason slow1, slow2, slow3;
     bool mpls_done = false;
 
     commit_encap_decap_action(flow, base, odp_actions, wc,
                               pending_encap, pending_decap, encap_data);
     commit_set_ether_action(flow, base, odp_actions, wc, use_masked);
+    // compose sgt strip
+    slow3 = commit_set_sgt_action(flow, base, odp_actions);
     /* Make packet a non-MPLS packet before committing L3/4 actions,
      * which would otherwise do nothing. */
     if (eth_type_mpls(base->dl_type) && !eth_type_mpls(flow->dl_type)) {
@@ -7886,5 +7912,8 @@ commit_odp_actions(const struct flow *flow, struct flow *base,
     commit_set_priority_action(flow, base, odp_actions, wc, use_masked);
     commit_set_pkt_mark_action(flow, base, odp_actions, wc, use_masked);
 
+    if (slow3) {
+        return slow3;
+    }
     return slow1 ? slow1 : slow2;
 }

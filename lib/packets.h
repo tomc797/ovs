@@ -1634,7 +1634,7 @@ BUILD_ASSERT_DECL(DNS_HEADER_LEN == sizeof(struct dns_header));
  */
 #define ETH_TYPE_CISCO_META		      0x8909 /* Cisco Meta Data */
 #define CISCO_META_HEADER_LEN       (8u)
-#define ETH_CISCO_META_HEADER_LEN   (ETH_HEADER_LEN+CISCO_META_HEADER_LEN)
+#define CISCO_META_ETH_HEADER_LEN   (ETH_HEADER_LEN+CISCO_META_HEADER_LEN)
 
 static inline bool eth_type_cisco_meta(ovs_be16 eth_type)
 {
@@ -1650,7 +1650,7 @@ struct cisco_meta_header
     ovs_be16 meta_next_type;
 };
 
-struct eth_cisco_meta_header
+struct cisco_meta_eth_header
 {
     struct eth_addr eth_dst;
     struct eth_addr eth_src;
@@ -1663,6 +1663,9 @@ struct eth_cisco_meta_header
 };
 
 _Static_assert(sizeof(struct cisco_meta_header) == CISCO_META_HEADER_LEN, "struct cisco_meta_header has unintended padding");
-_Static_assert(sizeof(struct eth_cisco_meta_header) == ETH_CISCO_META_HEADER_LEN, "struct eth_cisco_meta_header has unintended padding");
+_Static_assert(sizeof(struct cisco_meta_eth_header) == CISCO_META_ETH_HEADER_LEN, "struct eth_cisco_meta_header has unintended padding");
+
+/** actions */
+void eth_strip_sgt(struct dp_packet*);
 
 #endif /* packets.h */
