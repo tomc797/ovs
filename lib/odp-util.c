@@ -7860,14 +7860,14 @@ commit_set_sgt_action(const struct flow *flow, struct flow *base,
         return 0;
     }
 
-    if (flow->sgt_tag == base->sgt_tag) {
+    if (flow->sgt.tag_flags == base->sgt.tag_flags) {
         return 0;
     }
 
     /**
      * SGT are different; perform action
      */
-    base->sgt_tag = flow->sgt_tag;
+    base->sgt = flow->sgt;
     nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_STRIP_SGT);
     return SLOW_ACTION;
 }

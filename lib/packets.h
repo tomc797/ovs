@@ -1664,6 +1664,7 @@ struct cisco_meta_eth_header
 
 _Static_assert(sizeof(struct cisco_meta_header) == CISCO_META_HEADER_LEN, "struct cisco_meta_header has unintended padding");
 _Static_assert(sizeof(struct cisco_meta_eth_header) == CISCO_META_ETH_HEADER_LEN, "struct eth_cisco_meta_header has unintended padding");
+_Static_assert(sizeof(union flow_sgt_tag) == sizeof(uint32_t), "struct flow_sgt_tag has unintended padding");
 
 /** actions */
 void eth_strip_sgt(struct dp_packet*);
