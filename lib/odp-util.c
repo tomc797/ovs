@@ -7887,14 +7887,14 @@ commit_odp_actions(const struct flow *flow, struct flow *base,
                    bool use_masked, bool pending_encap, bool pending_decap,
                    struct ofpbuf *encap_data)
 {
-    enum slow_path_reason slow1, slow2, slow3;
+    enum slow_path_reason slow;
     bool mpls_done = false;
 
     commit_encap_decap_action(flow, base, odp_actions, wc,
                               pending_encap, pending_decap, encap_data);
     commit_set_ether_action(flow, base, odp_actions, wc, use_masked);
     // compose sgt strip
-    slow3 = commit_set_sgt_action(flow, base, odp_actions);
+    slow = commit_set_sgt_action(flow, base, odp_actions);
     /* Make packet a non-MPLS packet before committing L3/4 actions,
      * which would otherwise do nothing. */
     if (eth_type_mpls(base->dl_type) && !eth_type_mpls(flow->dl_type)) {
@@ -7902,9 +7902,9 @@ commit_odp_actions(const struct flow *flow, struct flow *base,
         mpls_done = true;
     }
     commit_set_nsh_action(flow, base, odp_actions, wc, use_masked);
-    slow1 = commit_set_nw_action(flow, base, odp_actions, wc, use_masked);
+    slow |= commit_set_nw_action(flow, base, odp_actions, wc, use_masked);
     commit_set_port_action(flow, base, odp_actions, wc, use_masked);
-    slow2 = commit_set_icmp_action(flow, base, odp_actions, wc);
+    slow |= commit_set_icmp_action(flow, base, odp_actions, wc);
     if (!mpls_done) {
         commit_mpls_action(flow, base, odp_actions);
     }
@@ -7912,8 +7912,5 @@ commit_odp_actions(const struct flow *flow, struct flow *base,
     commit_set_priority_action(flow, base, odp_actions, wc, use_masked);
     commit_set_pkt_mark_action(flow, base, odp_actions, wc, use_masked);
 
-    if (slow3) {
-        return slow3;
-    }
-    return slow1 ? slow1 : slow2;
+    return slow;
 }
