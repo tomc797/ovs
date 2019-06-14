@@ -6848,9 +6848,9 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
 
         case OFPACT_STRIP_SGT:
             if (wc) {
-              wc->masks.sgt_tag = htons(0xffff);
+              wc->masks.sgt.tag_flags = UINT32_MAX;
             }
-            flow->sgt_tag = htons(0x0000);
+            flow->sgt.tag_flags = 0;
             break;
         }
 

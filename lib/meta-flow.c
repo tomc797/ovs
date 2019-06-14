@@ -310,7 +310,7 @@ mf_is_all_wild(const struct mf_field *mf, const struct flow_wildcards *wc)
         return !(wc->masks.vlans[0].tci & htons(VLAN_PCP_MASK));
 
     case MFF_CMD_SGT_TAG:
-        return !wc->masks.sgt_tag;
+        return !wc->masks.sgt.tag;
 
     case MFF_MPLS_LABEL:
         return !(wc->masks.mpls_lse[0] & htonl(MPLS_LABEL_MASK));
@@ -819,7 +819,7 @@ mf_get_value(const struct mf_field *mf, const struct flow *flow,
         break;
 
     case MFF_CMD_SGT_TAG:
-        value->be16 = flow->sgt_tag;
+        value->be16 = flow->sgt.tag;
         break;
 
     case MFF_MPLS_LABEL:
@@ -1156,8 +1156,8 @@ mf_set_value(const struct mf_field *mf,
         break;
 
     case MFF_CMD_SGT_TAG:
-        match->wc.masks.sgt_tag = OVS_BE16_MAX;
-        match->flow.sgt_tag = value->be16;
+        match->flow.sgt.tag = value->be16;
+        match->wc.masks.sgt.tag = OVS_BE16_MAX;
         break;
 
     case MFF_MPLS_LABEL:
@@ -1567,7 +1567,8 @@ mf_set_flow_value(const struct mf_field *mf,
         break;
 
     case MFF_CMD_SGT_TAG:
-        flow->sgt_tag = value->be16;
+        flow->sgt.tag = value->be16;
+        flow->sgt.flags |= FLOW_SGT_TAG_PRESENT;
         break;
 
     case MFF_MPLS_LABEL:
@@ -2085,8 +2086,8 @@ mf_set_wild(const struct mf_field *mf, struct match *match, char **err_str)
         break;
 
     case MFF_CMD_SGT_TAG:
-        match->flow.sgt_tag = htons(0);
-        match->wc.masks.sgt_tag = htons(0);
+        match->flow.sgt.tag = htons(0);
+        match->wc.masks.sgt.tag = htons(0);
         break;
 
     case MFF_MPLS_LABEL:

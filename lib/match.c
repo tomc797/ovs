@@ -1585,7 +1585,7 @@ match_format(const struct match *match,
                       colors.param, colors.end, ntohs(dl_type));
     }
 
-    format_be16_masked(s, "sgt", f->sgt_tag, wc->masks.sgt_tag);
+    format_be16_masked(s, "sgt", f->sgt.tag, wc->masks.sgt.tag);
 
     if (dl_type == htons(ETH_TYPE_IPV6)) {
         format_ipv6_netmask(s, "ipv6_src", &f->ipv6_src, &wc->masks.ipv6_src);

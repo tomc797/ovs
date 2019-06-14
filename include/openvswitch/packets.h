@@ -93,6 +93,15 @@ struct ovs_key_nsh {
 
 #define FLOW_NSH_F_MASK ((1 << 2) - 1)
 
+union flow_sgt_tag {
+    struct {
+      ovs_be16 tag;
+      uint16_t flags;
+    };
+    uint32_t tag_flags;
+};
+#define FLOW_SGT_TAG_PRESENT             (1u)
+
 #ifdef __cplusplus
 }
 #endif
