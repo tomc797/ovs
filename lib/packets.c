@@ -276,6 +276,7 @@ pop_eth(struct dp_packet *packet)
         ethertype = *(ALIGNED_CAST(ovs_be16 *, (l3 - 2)));
     }
 
+    dp_packet_set_eth_metadata(packet, NULL);
     dp_packet_resize_l2(packet, -increment);
     packet->packet_type = PACKET_TYPE_BE(OFPHTN_ETHERTYPE, ntohs(ethertype));
 }
@@ -1704,8 +1705,15 @@ IP_ECN_set_ce(struct dp_packet *pkt, bool is_ipv6)
 void
 eth_strip_sgt(struct dp_packet *packet)
 {
-  struct cisco_meta_eth_header *mh = dp_packet_eth(packet);
-  if (OVS_UNLIKELY(!mh || mh->eth_type != htons(0x8909)))
-      return;
-  mh->meta_sgt = htons(0x1234);
+    char *eh = dp_packet_eth(packet);
+    int mac_len, increment;
+
+    if(OVS_UNLIKELY(!(eh && packet->eth_metadata_ofs != UINT16_MAX)))
+        return;
+    mac_len = MIN(packet->l2_5_ofs, packet->l3_ofs);
+    increment = mac_len - packet->eth_metadata_ofs;
+    mac_len -= increment;
+    (void) memmove (eh+increment, eh, mac_len-ETH_ETHERTYPE_LEN);
+    dp_packet_resize_l2(packet, -increment);
+    dp_packet_set_eth_metadata(packet, NULL);
 }

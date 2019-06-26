@@ -67,6 +67,7 @@ struct dp_packet {
      * of memcpy in dp_packet_clone_with_headroom. */
     uint8_t l2_pad_size;           /* Detected l2 padding size.
                                     * Padding is non-pullable. */
+    uint16_t eth_metadata_ofs;     /* Ethernet metadata offset, or UINT16_MAX */
     uint16_t l2_5_ofs;             /* MPLS label stack offset, or UINT16_MAX */
     uint16_t l3_ofs;               /* Network-level header offset,
                                     * or UINT16_MAX. */
@@ -290,6 +291,7 @@ static inline void
 dp_packet_reset_offsets(struct dp_packet *b)
 {
     b->l2_pad_size = 0;
+    b->eth_metadata_ofs = UINT16_MAX;
     b->l2_5_ofs = UINT16_MAX;
     b->l3_ofs = UINT16_MAX;
     b->l4_ofs = UINT16_MAX;
@@ -306,6 +308,23 @@ dp_packet_set_l2_pad_size(struct dp_packet *b, uint8_t pad_size)
 {
     ovs_assert(pad_size <= dp_packet_size(b));
     b->l2_pad_size = pad_size;
+}
+
+static inline void *
+dp_packet_eth_metadata(const struct dp_packet *b)
+{
+    char *eth = dp_packet_eth(b);
+    return eth && b->eth_metadata_ofs != UINT16_MAX
+           ? eth + b->eth_metadata_ofs
+           : NULL;
+}
+
+static inline void
+dp_packet_set_eth_metadata(struct dp_packet *b, void *eth_metadata)
+{
+    b->eth_metadata_ofs = eth_metadata
+                  ? (char *) eth_metadata - (char *) dp_packet_data(b)
+                  : UINT16_MAX;
 }
 
 static inline void *
