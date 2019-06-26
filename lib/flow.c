@@ -787,10 +787,10 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
              */
             union flow_sgt_tag sgt = {};
             if (OVS_UNLIKELY(eth_type_cisco_meta(dl_type))) {
-                const struct cisco_meta_header *meta = data;
+                const struct eth_meta_header *meta = data;
 
                 /* Parse Cisco Metdata header */
-                if (OVS_LIKELY(size >= CISCO_META_HEADER_LEN
+                if (OVS_LIKELY(size >= ETH_META_HEADER_LEN
                                && meta->meta_ver == 0x01
                                && meta->meta_len >= 1u)) {
                     /**
@@ -804,7 +804,8 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
                     if (OVS_LIKELY(meta->meta_len == 1u
                                    && meta->meta_option == htons(0x0001))) {
                         dl_type = meta->meta_next_type;
-                        data_pull(&data, &size, CISCO_META_HEADER_LEN);
+                        data_pull(&data, &size, ETH_META_HEADER_LEN);
+                        dp_packet_set_eth_metadata(packet, (char*) meta);
                     }
                 }
             }

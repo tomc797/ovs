@@ -482,6 +482,7 @@ void *
 dp_packet_resize_l2(struct dp_packet *b, int increment)
 {
     dp_packet_resize_l2_5(b, increment);
+    dp_packet_adjust_layer_offset(&b->eth_metadata_ofs, increment);
     dp_packet_adjust_layer_offset(&b->l2_5_ofs, increment);
     return dp_packet_data(b);
 }
