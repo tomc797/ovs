@@ -1099,9 +1099,10 @@ nx_put_raw(struct ofpbuf *b, enum ofp_version oxm, const struct match *match,
     }
 
     /* Scalable Group Tag. */
-    if (match->wc.masks.sgt.tag) {
+    if (match->wc.masks.sgt_tci) {
         nxm_put_16m(&ctx, MFF_CMD_SGT_TAG, oxm,
-                    flow->sgt.tag, match->wc.masks.sgt.tag);
+                    htons(ntohl(flow->sgt_tci)),
+                    htons(ntohl(match->wc.masks.sgt_tci)));
     }
 
     /* MPLS. */

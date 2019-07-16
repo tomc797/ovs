@@ -310,7 +310,7 @@ mf_is_all_wild(const struct mf_field *mf, const struct flow_wildcards *wc)
         return !(wc->masks.vlans[0].tci & htons(VLAN_PCP_MASK));
 
     case MFF_CMD_SGT_TAG:
-        return !wc->masks.sgt.tag;
+        return !(wc->masks.sgt_tci & htonl(SGT_TID_MASK));
 
     case MFF_MPLS_LABEL:
         return !(wc->masks.mpls_lse[0] & htonl(MPLS_LABEL_MASK));
@@ -550,7 +550,6 @@ mf_is_value_valid(const struct mf_field *mf, const union mf_value *value)
     case MFF_ETH_DST:
     case MFF_ETH_TYPE:
     case MFF_VLAN_TCI:
-    case MFF_CMD_SGT_TAG:
     case MFF_MPLS_TTL:
     case MFF_IPV4_SRC:
     case MFF_IPV4_DST:
@@ -639,6 +638,9 @@ mf_is_value_valid(const struct mf_field *mf, const union mf_value *value)
     case MFF_NSH_C2:
     case MFF_NSH_C3:
     case MFF_NSH_C4:
+        return true;
+
+    case MFF_CMD_SGT_TAG:
         return true;
 
     case MFF_N_IDS:
@@ -819,7 +821,7 @@ mf_get_value(const struct mf_field *mf, const struct flow *flow,
         break;
 
     case MFF_CMD_SGT_TAG:
-        value->be16 = flow->sgt.tag;
+        value->be16 = htons(ntohl(flow->sgt_tci));
         break;
 
     case MFF_MPLS_LABEL:
@@ -1156,8 +1158,8 @@ mf_set_value(const struct mf_field *mf,
         break;
 
     case MFF_CMD_SGT_TAG:
-        match->flow.sgt.tag = value->be16;
-        match->wc.masks.sgt.tag = OVS_BE16_MAX;
+        match->flow.sgt_tci = htonl(ntohs(value->be16)|SGT_TAG_PRESENT);
+        match->wc.masks.sgt_tci = htonl(SGT_TCI_MASK);
         break;
 
     case MFF_MPLS_LABEL:
@@ -1567,8 +1569,7 @@ mf_set_flow_value(const struct mf_field *mf,
         break;
 
     case MFF_CMD_SGT_TAG:
-        flow->sgt.tag = value->be16;
-        flow->sgt.flags |= FLOW_SGT_TAG_PRESENT;
+        flow->sgt_tci = htonl(ntohs(value->be16)|SGT_TAG_PRESENT);
         break;
 
     case MFF_MPLS_LABEL:
@@ -2086,8 +2087,8 @@ mf_set_wild(const struct mf_field *mf, struct match *match, char **err_str)
         break;
 
     case MFF_CMD_SGT_TAG:
-        match->flow.sgt.tag = htons(0);
-        match->wc.masks.sgt.tag = htons(0);
+        match->flow.sgt_tci = htonl(0);
+        match->wc.masks.sgt_tci = htonl(0);
         break;
 
     case MFF_MPLS_LABEL:
@@ -2295,7 +2296,6 @@ mf_set(const struct mf_field *mf,
     case MFF_DL_VLAN:
     case MFF_DL_VLAN_PCP:
     case MFF_VLAN_PCP:
-    case MFF_CMD_SGT_TAG:
     case MFF_MPLS_LABEL:
     case MFF_MPLS_TC:
     case MFF_MPLS_BOS:
@@ -2424,6 +2424,11 @@ mf_set(const struct mf_field *mf,
 
     case MFF_VLAN_VID:
         match_set_vlan_vid_masked(match, value->be16, mask->be16);
+        break;
+
+    case MFF_CMD_SGT_TAG:
+        match->flow.sgt_tci = htonl(ntohs((value->be16&mask->be16))|SGT_TAG_PRESENT);
+        match->wc.masks.sgt_tci = htonl(ntohs(mask->be16)|SGT_TAG_PRESENT);
         break;
 
     case MFF_IPV4_SRC:

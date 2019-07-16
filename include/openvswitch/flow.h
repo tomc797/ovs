@@ -125,8 +125,10 @@ struct flow {
                                    packets of type PACKET_TYPE(1, Ethertype) */
     uint8_t pad1[2];            /* Pad to 64 bits. */
     union flow_vlan_hdr vlans[FLOW_MAX_VLAN_HEADERS]; /* VLANs */
-    union flow_sgt_tag sgt;    /* Scalable Group Tag */
+
+    ovs_be32 sgt_tci;           /* Scalable Group Tag */
     uint32_t sgt_pad1;          /* Pad to 64 bits */
+
     ovs_be32 mpls_lse[ROUND_UP(FLOW_MAX_MPLS_LABELS, 2)]; /* MPLS label stack
                                                              (with padding). */
     /* L3 (64-bit aligned) */

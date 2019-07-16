@@ -785,7 +785,7 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             /** 
              * Parse scalable group tag, contained in Cisco Meta Data
              */
-            union flow_sgt_tag sgt = {};
+            ovs_be32 sgt_tci;
             if (OVS_UNLIKELY(eth_type_cisco_meta(dl_type))) {
                 const struct eth_meta_header *meta = data;
 
@@ -797,8 +797,7 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
                      * If SGT option exists, parse.
                      */
                      if (OVS_LIKELY(meta->meta_option == htons(0x0001))) {
-                         sgt.tag = meta->meta_sgt;
-                         sgt.flags = FLOW_SGT_TAG_PRESENT;
+                         sgt_tci = htonl(ntohs(meta->meta_sgt)|SGT_TAG_PRESENT);
                      }
 
                     if (OVS_LIKELY(meta->meta_len == 1u
@@ -817,7 +816,8 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             }
 
             /* Push SGT */
-            miniflow_push_words_32(mf, sgt, &sgt, 1);
+            miniflow_push_words_32(mf, sgt_tci, &sgt_tci, 1);
+            miniflow_pad_to_64(mf, sgt_tci);
         }
     } else {
         /* Take dl_type from packet_type. */
@@ -1804,7 +1804,7 @@ flow_wildcards_init_for_packet(struct flow_wildcards *wc,
                 break;
             }
         }
-        WC_MASK_FIELD(wc, sgt);
+        WC_MASK_FIELD(wc, sgt_tci);
         dl_type = flow->dl_type;
     } else {
         dl_type = pt_ns_type_be(flow->packet_type);
@@ -1918,7 +1918,7 @@ flow_wc_map(const struct flow *flow, struct flowmap *map)
     FLOWMAP_SET(map, dl_src);
     FLOWMAP_SET(map, dl_type);
     FLOWMAP_SET(map, vlans);
-    FLOWMAP_SET(map, sgt);
+    FLOWMAP_SET(map, sgt_tci);
     FLOWMAP_SET(map, ct_state);
     FLOWMAP_SET(map, ct_zone);
     FLOWMAP_SET(map, ct_mark);
