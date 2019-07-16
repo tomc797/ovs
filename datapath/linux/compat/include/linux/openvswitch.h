@@ -377,6 +377,8 @@ enum ovs_key_attr {
 	OVS_KEY_ATTR_PACKET_TYPE,  /* be32 packet type */
 #endif
 
+  OVS_KEY_ATTR_CMD_SGT = 31,
+
 	__OVS_KEY_ATTR_MAX
 };
 
