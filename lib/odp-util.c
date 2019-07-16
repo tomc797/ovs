@@ -7860,16 +7860,19 @@ commit_set_sgt_action(const struct flow *flow, struct flow *base,
         return 0;
     }
 
-    if (flow->sgt.tag_flags == base->sgt.tag_flags) {
+    if (flow->sgt_tci == base->sgt_tci) {
         return 0;
     }
 
     /**
      * SGT are different; perform action
      */
-    base->sgt = flow->sgt;
-    nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_STRIP_SGT);
-    return SLOW_ACTION;
+    base->sgt_tci = flow->sgt_tci;
+    if ((base->sgt_tci&htonl(SGT_TAG_PRESENT)) == 0) {
+        nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_STRIP_SGT);
+        return SLOW_ACTION;
+    }
+    return 0;
 }
 
 /* If any of the flow key data that ODP actions can modify are different in
