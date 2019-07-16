@@ -97,6 +97,10 @@ struct sw_flow_key {
 	u8 ct_orig_proto;		/* CT original direction tuple IP
 					 * protocol.
 					 */
+        struct {
+          u32 sgt_tci;
+        } cmd;
+
 	union {
 		struct {
 			__be32 top_lse;	/* top label stack entry */

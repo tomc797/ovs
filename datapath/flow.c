@@ -53,6 +53,7 @@
 #include "flow.h"
 #include "flow_netlink.h"
 #include "vport.h"
+#include "cmd.h"
 
 u64 ovs_flow_used_time(unsigned long flow_jiffies)
 {
@@ -538,6 +539,49 @@ static int parse_nsh(struct sk_buff *skb, struct sw_flow_key *key)
 	}
 
 	return 0;
+}
+
+static int parse_cmd(struct sk_buff *skb, struct sw_flow_key *key)
+{
+  unsigned int nh_ofs = skb_network_offset(skb);
+  unsigned int ver, len;
+  u8 *nh;
+  int err;
+  __be16 ethertype;
+
+  err = check_header(skb, nh_ofs+2);
+  if (unlikely(err))
+    return err;
+  nh = skb_network_header(skb);
+  ver = *nh;
+  len = *(nh+1);
+  if (ver != 0x01)
+    return -EINVAL;
+  len = 4*(len+1);
+  err = check_header(skb, nh_ofs+len);
+  if (unlikely(err))
+    return -EINVAL;
+  /**
+   * point network_header to next sdu
+   * update ethertype
+   */
+  skb_set_network_header(skb, nh_ofs+len);
+  skb_reset_mac_len(skb);
+  ethertype = *(__be16*)(skb_network_header(skb)-2);
+  key->eth.type = ethertype;
+  if (likely(skb->protocol == ETH_P_CMD))
+    skb->protocol = key->eth.type;
+  /**
+   * SGT will be the first option
+   */
+  if (len >= 8) {
+    __be16 type = *(__be16*)(nh+2);
+    __be16 value = *(__be16*)(nh+4);
+    if (type == htons(CMD_O_SGT)) {
+      key->cmd.sgt_tci = ntohs(value)|SGT_TAG_PRESENT;
+    }
+  }
+  return 0;
 }
 
 /**
