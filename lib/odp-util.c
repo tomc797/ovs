@@ -2519,6 +2519,7 @@ const struct attr_len_tbl ovs_flow_key_attr_lens[OVS_KEY_ATTR_MAX + 1] = {
     [OVS_KEY_ATTR_NSH]       = { .len = ATTR_LEN_NESTED,
                                  .next = ovs_nsh_key_attr_lens,
                                  .next_max = OVS_NSH_KEY_ATTR_MAX },
+    [OVS_KEY_ATTR_CMD_SGT]   = { .len = sizeof(ovs_be32) },
 };
 
 /* Returns the correct length of the payload for a flow key attribute of the
@@ -3945,17 +3946,19 @@ format_odp_key_attr__(const struct nlattr *a, const struct nlattr *ma,
         format_mpls(ds, mpls_key, mpls_mask, size / sizeof *mpls_key);
         break;
     }
+    case OVS_KEY_ATTR_CMD_SGT:
+        ds_put_format(ds, "0x%04"PRIx16,
+                      (uint16_t) ntohl(nl_attr_get_be32(a)));
+        if (!is_exact) {
+            ds_put_format(ds, "/0x%04"PRIx16,
+                          (uint16_t) ntohl(nl_attr_get_be32(ma)));
+        }
+        break;
+
     case OVS_KEY_ATTR_ETHERTYPE:
         ds_put_format(ds, "0x%04"PRIx16, ntohs(nl_attr_get_be16(a)));
         if (!is_exact) {
             ds_put_format(ds, "/0x%04"PRIx16, ntohs(nl_attr_get_be16(ma)));
-        }
-        break;
-
-    case OVS_KEY_ATTR_CMD_SGT:
-        ds_put_format(ds, "0x%05"PRIx32, ntohl(nl_attr_get_be32(a)));
-        if (!is_exact) {
-            ds_put_format(ds, "/0x%05"PRIx32, ntohl(nl_attr_get_be32(ma)));
         }
         break;
 
@@ -4810,6 +4813,20 @@ scan_be32_bf(const char *s, ovs_be32 *key, ovs_be32 *mask, uint8_t bits,
 }
 
 static int
+scan_sgt_tci(const char *s, ovs_be32 *key, ovs_be32 *mask)
+{
+    uint16_t key_, mask_;
+    int len;
+
+    if ((len = scan_u16(s, &key_, &mask_)) > 0) {
+      *key = htonl(key_|SGT_TAG_PRESENT);
+      if (mask) 
+          *mask = htonl(mask_|SGT_TAG_PRESENT);
+    }
+    return len;
+}
+
+static int
 scan_mpls_label(const char *s, ovs_be32 *key, ovs_be32 *mask)
 {
     return scan_be32_bf(s, key, mask, 20, MPLS_LABEL_SHIFT);
@@ -5499,6 +5516,8 @@ parse_odp_key_mask_attr(struct parse_odp_context *context, const char *s,
         SCAN_FIELD("pcp=", pcp, tci);
         SCAN_FIELD("cfi=", cfi, tci);
     } SCAN_END(OVS_KEY_ATTR_VLAN);
+
+    SCAN_SINGLE("sgt(", ovs_be32, sgt_tci, OVS_KEY_ATTR_CMD_SGT);
 
     SCAN_SINGLE("eth_type(", ovs_be16, be16, OVS_KEY_ATTR_ETHERTYPE);
 
