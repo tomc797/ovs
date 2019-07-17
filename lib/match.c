@@ -1238,6 +1238,22 @@ format_be32_masked_hex(struct ds *s, const char *name,
 }
 
 static void
+format_sgt_tci(struct ds *s, const char *name,
+               ovs_be32 value, ovs_be32 mask)
+{
+    if (mask != htonl(0)) {
+        ds_put_format(s, "%s%s=%s", colors.param, name, colors.end);
+        if (mask == htonl(SGT_TCI_MASK)) {
+            ds_put_format(s, "0x%.5"PRIx32, ntohl(value));
+        } else {
+            ds_put_format(s, "0x%.5"PRIx32"/0x%.5"PRIx32,
+                          ntohl(value), ntohl(mask));
+        }
+        ds_put_char(s, ',');
+    }
+}
+
+static void
 format_uint32_masked(struct ds *s, const char *name,
                    uint32_t value, uint32_t mask)
 {
@@ -1585,8 +1601,7 @@ match_format(const struct match *match,
                       colors.param, colors.end, ntohs(dl_type));
     }
 
-    format_be16_masked(s, "sgt", htons(ntohl(f->sgt_tci)), 
-                       htons(ntohl(wc->masks.sgt_tci)));
+    format_sgt_tci(s, "sgt_tci", f->sgt_tci, wc->masks.sgt_tci);
 
     if (dl_type == htons(ETH_TYPE_IPV6)) {
         format_ipv6_netmask(s, "ipv6_src", &f->ipv6_src, &wc->masks.ipv6_src);

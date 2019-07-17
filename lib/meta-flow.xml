@@ -3607,7 +3607,8 @@ r r c c c.
   </group>
 
   <group title="Scalable Group Tag">
-    <field id="MFF_CMD_SGT_TAG" title="SGT"/>
+    <field id="MFF_CMD_SGT_TAG" title="SGT TID"/>
+    <field id="MFF_CMD_SGT_TCI" title="SGT TCI"/>
   </group>
 
   <group title="Layer 2.5: MPLS">

@@ -1224,6 +1224,20 @@ enum OVS_PACKED_ENUM mf_field_id {
      */
     MFF_CMD_SGT_TAG,
 
+    /* "sgt_tci".
+     *
+     * Scalable Group Tag tag control information
+     *
+     * Type: be32 (low 17 bits).
+     * Maskable: bitwise.
+     * Formatting: hexadecimal.
+     * Prerequisites: Ethernet.
+     * Access: read/write.
+     * NXM: none.
+     * OXM: TOMC_ET_SGT_TAG(2) since v2.11.
+     */
+    MFF_CMD_SGT_TCI,
+
 /* ## ---- ## */
 /* ## MPLS ## */
 /* ## ---- ## */
