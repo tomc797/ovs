@@ -179,6 +179,7 @@ ovs_key_attr_to_string(enum ovs_key_attr attr, char *namebuf, size_t bufsize)
     case OVS_KEY_ATTR_RECIRC_ID: return "recirc_id";
     case OVS_KEY_ATTR_PACKET_TYPE: return "packet_type";
     case OVS_KEY_ATTR_NSH: return "nsh";
+    case OVS_KEY_ATTR_CMD_SGT: return "sgt";
 
     case __OVS_KEY_ATTR_MAX:
     default:
@@ -2972,6 +2973,9 @@ odp_mask_is_constant__(enum ovs_key_attr attr, const void *mask, size_t size,
     case OVS_KEY_ATTR_NSH:
         return is_all_byte(mask, size, u8);
 
+    case OVS_KEY_ATTR_CMD_SGT:
+        return *(ovs_be32 *) mask == htonl(u32 & SGT_TCI_MASK);
+
     case OVS_KEY_ATTR_TCP_FLAGS:
         return TCP_FLAGS(*(ovs_be16 *) mask) == TCP_FLAGS(be16);
 
@@ -3945,6 +3949,13 @@ format_odp_key_attr__(const struct nlattr *a, const struct nlattr *ma,
         ds_put_format(ds, "0x%04"PRIx16, ntohs(nl_attr_get_be16(a)));
         if (!is_exact) {
             ds_put_format(ds, "/0x%04"PRIx16, ntohs(nl_attr_get_be16(ma)));
+        }
+        break;
+
+    case OVS_KEY_ATTR_CMD_SGT:
+        ds_put_format(ds, "0x%05"PRIx32, ntohl(nl_attr_get_be32(a)));
+        if (!is_exact) {
+            ds_put_format(ds, "/0x%05"PRIx32, ntohl(nl_attr_get_be32(ma)));
         }
         break;
 
@@ -6135,6 +6146,7 @@ odp_key_to_dp_packet(const struct nlattr *key, size_t key_len,
         case OVS_KEY_ATTR_MPLS:
         case OVS_KEY_ATTR_PACKET_TYPE:
         case OVS_KEY_ATTR_NSH:
+        case OVS_KEY_ATTR_CMD_SGT:
         case __OVS_KEY_ATTR_MAX:
         default:
             break;
@@ -7860,16 +7872,19 @@ commit_set_sgt_action(const struct flow *flow, struct flow *base,
         return 0;
     }
 
-    if (flow->sgt.tag_flags == base->sgt.tag_flags) {
+    if (flow->sgt_tci == base->sgt_tci) {
         return 0;
     }
 
     /**
      * SGT are different; perform action
      */
-    base->sgt = flow->sgt;
-    nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_STRIP_SGT);
-    return SLOW_ACTION;
+    base->sgt_tci = flow->sgt_tci;
+    if ((base->sgt_tci&htonl(SGT_TAG_PRESENT)) == 0) {
+        nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_STRIP_SGT);
+        return SLOW_ACTION;
+    }
+    return 0;
 }
 
 /* If any of the flow key data that ODP actions can modify are different in

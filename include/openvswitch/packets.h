@@ -101,6 +101,9 @@ union flow_sgt_tag {
     uint32_t tag_flags;
 };
 #define FLOW_SGT_TAG_PRESENT             (1u)
+#define SGT_TAG_PRESENT                  (1u<<16)
+#define SGT_TID_MASK                     (0xFFFFu)
+#define SGT_TCI_MASK                     (0x1FFFFu)
 
 #ifdef __cplusplus
 }
