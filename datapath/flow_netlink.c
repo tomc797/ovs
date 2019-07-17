@@ -190,7 +190,7 @@ static bool match_validate(const struct sw_flow_match *match,
 		       | (1ULL << OVS_KEY_ATTR_ETHERTYPE));
   
   /* SGT is always allowed in the mask field. */
-  mask_allow |= (1ULL << OVS_KEY_ATTR_CMD_SGT);
+  mask_allowed |= (1ULL << OVS_KEY_ATTR_CMD_SGT);
 
 	/* Check key attributes. */
 	if (match->key->eth.type == htons(ETH_P_ARP)
@@ -451,7 +451,7 @@ static const struct ovs_len_tbl ovs_key_lens[OVS_KEY_ATTR_MAX + 1] = {
 		.len = sizeof(struct ovs_key_ct_tuple_ipv6) },
 	[OVS_KEY_ATTR_NSH]       = { .len = OVS_ATTR_NESTED,
 				     .next = ovs_nsh_key_attr_lens, },
-	[OVS_KEY_ATTR_CMD_SGT]   = { .len = sizeof(u32) },
+	[OVS_KEY_ATTR_CMD_SGT]   = { .len = sizeof(__be32) },
 };
 
 static bool check_attr_len(unsigned int attr_len, unsigned int expected_len)
@@ -1514,6 +1514,7 @@ static int ovs_key_from_nlattrs(struct net *net, struct sw_flow_match *match,
 			return -EINVAL;
 		}
 
+
 		if (attrs & (1ULL << OVS_KEY_ATTR_ETHERTYPE)) {
 			err = parse_eth_type_from_nlattrs(match, &attrs, a, is_mask,
 							  log);
@@ -1523,16 +1524,16 @@ static int ovs_key_from_nlattrs(struct net *net, struct sw_flow_match *match,
 			SW_FLOW_KEY_PUT(match, eth.type, htons(ETH_P_802_2), is_mask);
 		}
 
-    if (attrs & (1ULL << OVS_KEY_ATTR_CMD_SGT)) {
-      SW_FLOW_KEY_PUT(match, cmd.sgt_tci,
-                      nla_get_u32(a[OVS_KEY_ATTR_CMD_SGT]), is_mask);
-		  attrs &= ~(1ULL << OVS_KEY_ATTR_CMD_SGT);
-    }
-
 	} else if (!match->key->eth.type) {
 		OVS_NLERR(log, "Either Ethernet header or EtherType is required.");
 		return -EINVAL;
 	}
+
+  if (attrs & (1ULL << OVS_KEY_ATTR_CMD_SGT)) {
+    SW_FLOW_KEY_PUT(match, cmd.sgt_tci,
+                    nla_get_be32(a[OVS_KEY_ATTR_CMD_SGT]), is_mask);
+    attrs &= ~(1ULL << OVS_KEY_ATTR_CMD_SGT);
+  }
 
 	if (attrs & (1 << OVS_KEY_ATTR_IPV4)) {
 		const struct ovs_key_ipv4 *ipv4_key;
@@ -2055,10 +2056,10 @@ static int __ovs_nla_put_key(const struct sw_flow_key *swkey,
 		}
 	}
 
-	if (nla_put_be16(skb, OVS_KEY_ATTR_ETHERTYPE, output->eth.type))
+  if (nla_put_be32(skb, OVS_KEY_ATTR_CMD_SGT, output->cmd.sgt_tci))
 		goto nla_put_failure;
 
-  if (nla_put_u32(skb, OVS_KEY_ATTR_CMD_SGT, output->cmd.sgt_tci))
+	if (nla_put_be16(skb, OVS_KEY_ATTR_ETHERTYPE, output->eth.type))
 		goto nla_put_failure;
 
 	if (eth_type_vlan(swkey->eth.type)) {
