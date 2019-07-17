@@ -567,7 +567,7 @@ static int parse_cmd(struct sk_buff *skb, struct sw_flow_key *key)
    */
   skb_set_network_header(skb, nh_ofs+len);
   skb_reset_mac_len(skb);
-  ethertype = *(__be16*)(skb_network_header(skb)-2);
+  ethertype = *(__be16*)(nh+len-2);
   key->eth.type = ethertype;
   if (likely(skb->protocol == ETH_P_CMD))
     skb->protocol = key->eth.type;
@@ -578,7 +578,7 @@ static int parse_cmd(struct sk_buff *skb, struct sw_flow_key *key)
     __be16 type = *(__be16*)(nh+2);
     __be16 value = *(__be16*)(nh+4);
     if (type == htons(CMD_O_SGT)) {
-      key->cmd.sgt_tci = ntohs(value)|SGT_TAG_PRESENT;
+      key->cmd.sgt_tci = htonl(ntohs(value)|SGT_TAG_PRESENT);
     }
   }
   return 0;
@@ -658,6 +658,17 @@ static int key_extract(struct sk_buff *skb, struct sw_flow_key *key)
 	}
 
 	skb_reset_mac_len(skb);
+
+  if (key->eth.type == htons(ETH_P_CMD)) {
+    error = parse_cmd(skb, key);
+    if (unlikely(error)) {
+      if (error == -EINVAL)
+        error = 0;
+      return error;
+    }
+  }
+  
+  printk("My sgt is 0x%04x\n", (uint16_t) ntohl(key->cmd.sgt_tci));
 
 	/* Network layer. */
 	if (key->eth.type == htons(ETH_P_IP)) {
