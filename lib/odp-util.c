@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "odp-util.h"
+#include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <math.h>
@@ -3946,15 +3947,26 @@ format_odp_key_attr__(const struct nlattr *a, const struct nlattr *ma,
         format_mpls(ds, mpls_key, mpls_mask, size / sizeof *mpls_key);
         break;
     }
-    case OVS_KEY_ATTR_CMD_SGT:
-        ds_put_format(ds, "0x%04"PRIx16,
-                      (uint16_t) ntohl(nl_attr_get_be32(a)));
-        if (!is_exact) {
-            ds_put_format(ds, "/0x%04"PRIx16,
-                          (uint16_t) ntohl(nl_attr_get_be32(ma)));
+    case OVS_KEY_ATTR_CMD_SGT: {
+        ovs_be32 key = ntohl(nl_attr_get_be32(a));
+        ovs_be32 mask = !is_exact ? ntohl(nl_attr_get_be32(ma)) : SGT_TCI_MASK;
+
+        if (key == 0x10000 && mask == 0x10000) {
+          // print empty tag
+        } else {
+          // print key without the leading 1-bit
+          if (is_exact) {
+            ds_put_format(ds, "0x%04"PRIx16, (uint16_t)key);
+          } else {
+            ds_put_format(ds, "0x%05"PRIx32, key);
+          }
+          // print maks
+          if (!is_exact) {
+              ds_put_format(ds, "/0x%05"PRIx32, mask);
+          }
         }
         break;
-
+    }
     case OVS_KEY_ATTR_ETHERTYPE:
         ds_put_format(ds, "0x%04"PRIx16, ntohs(nl_attr_get_be16(a)));
         if (!is_exact) {
@@ -4815,14 +4827,22 @@ scan_be32_bf(const char *s, ovs_be32 *key, ovs_be32 *mask, uint8_t bits,
 static int
 scan_sgt_tci(const char *s, ovs_be32 *key, ovs_be32 *mask)
 {
-    uint16_t key_, mask_;
-    int len;
-
-    if ((len = scan_u16(s, &key_, &mask_)) > 0) {
-      *key = htonl(key_|SGT_TAG_PRESENT);
-      if (mask) 
-          *mask = htonl(mask_|SGT_TAG_PRESENT);
+    uint32_t key_ = 0x0, mask_ = 0x0;
+    const char *cp = s;
+    int len = 0;
+    /* consume whitespace */
+    while(isspace((unsigned char) *cp)) {
+        ++cp;
     }
+    /* if is empty, treat as must have a tag */
+    if (*cp == ')') {
+      len = cp - s;
+    } else if ((len = scan_be32_bf(cp, &key_, &mask_, 17, 0)) <= 0) {
+      return -EINVAL;
+    }
+    *key = htonl(key_|SGT_TAG_PRESENT);
+    if (mask)
+      *mask = htonl(mask_|SGT_TAG_PRESENT);
     return len;
 }
 
@@ -5517,7 +5537,12 @@ parse_odp_key_mask_attr(struct parse_odp_context *context, const char *s,
         SCAN_FIELD("cfi=", cfi, tci);
     } SCAN_END(OVS_KEY_ATTR_VLAN);
 
-    SCAN_SINGLE("sgt(", ovs_be32, sgt_tci, OVS_KEY_ATTR_CMD_SGT);
+    SCAN_BEGIN("sgt(", ovs_be32) {
+        len = scan_sgt_tci(s, &skey, &smask);
+        if (len < 0)
+            return len;
+        s += len;
+    } SCAN_END_SINGLE(OVS_KEY_ATTR_CMD_SGT);
 
     SCAN_SINGLE("eth_type(", ovs_be16, be16, OVS_KEY_ATTR_ETHERTYPE);
 
