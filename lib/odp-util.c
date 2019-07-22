@@ -3954,16 +3954,7 @@ format_odp_key_attr__(const struct nlattr *a, const struct nlattr *ma,
         if (key == 0x10000 && mask == 0x10000) {
           // print empty tag
         } else {
-          // print key without the leading 1-bit
-          if (is_exact) {
-            ds_put_format(ds, "0x%04"PRIx16, (uint16_t)key);
-          } else {
-            ds_put_format(ds, "0x%05"PRIx32, key);
-          }
-          // print maks
-          if (!is_exact) {
-              ds_put_format(ds, "/0x%05"PRIx32, mask);
-          }
+          ds_put_format(ds, "0x%05"PRIx32"/0x%05"PRIx32, key, mask);
         }
         break;
     }
@@ -5888,6 +5879,11 @@ odp_flow_key_from_flow__(const struct odp_flow_key_parms *parms,
         }
     }
 
+    // Add the SGT if marked
+    if (data->sgt_tci != htonl(0)) {
+        nl_msg_put_be32(buf, OVS_KEY_ATTR_CMD_SGT, data->sgt_tci);
+    }
+
     if (ntohs(flow->dl_type) < ETH_TYPE_MIN) {
         /* For backwards compatibility with kernels that don't support
          * wildcarding, the following convention is used to encode the
@@ -6402,6 +6398,15 @@ parse_l2_5_onward(const struct nlattr *attrs[OVS_KEY_ATTR_MAX + 1],
     const void *check_start = NULL;
     size_t check_len = 0;
     enum ovs_key_attr expected_bit = 0xff;
+
+    if (is_mask) {
+        flow->sgt_tci = htonl(SGT_TCI_MASK);
+    }
+
+    if (present_attrs & (UINT64_C(1) << OVS_KEY_ATTR_CMD_SGT)) {
+        flow->sgt_tci = nl_attr_get_be32(attrs[OVS_KEY_ATTR_CMD_SGT]);
+        *expected_attrs |= (UINT64_C(1) << OVS_KEY_ATTR_CMD_SGT);
+    }
 
     if (eth_type_mpls(src_flow->dl_type)) {
         if (!is_mask || present_attrs & (UINT64_C(1) << OVS_KEY_ATTR_MPLS)) {

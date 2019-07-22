@@ -54,6 +54,7 @@
 #include "flow.h"
 #include "flow_netlink.h"
 #include "gso.h"
+#include "cmd.h"
 
 struct ovs_len_tbl {
 	int len;
@@ -1514,7 +1515,6 @@ static int ovs_key_from_nlattrs(struct net *net, struct sw_flow_match *match,
 			return -EINVAL;
 		}
 
-
 		if (attrs & (1ULL << OVS_KEY_ATTR_ETHERTYPE)) {
 			err = parse_eth_type_from_nlattrs(match, &attrs, a, is_mask,
 							  log);
@@ -1530,8 +1530,9 @@ static int ovs_key_from_nlattrs(struct net *net, struct sw_flow_match *match,
 	}
 
   if (attrs & (1ULL << OVS_KEY_ATTR_CMD_SGT)) {
-    SW_FLOW_KEY_PUT(match, cmd.sgt_tci,
-                    nla_get_be32(a[OVS_KEY_ATTR_CMD_SGT]), is_mask);
+    __be32 sgt_tci = nla_get_be32(a[OVS_KEY_ATTR_CMD_SGT]);
+    printk("get sgt %s = 0x%05x\n", is_mask ? "mask" : "key", ntohl(sgt_tci));
+    SW_FLOW_KEY_PUT(match, cmd.sgt_tci, sgt_tci, is_mask);
     attrs &= ~(1ULL << OVS_KEY_ATTR_CMD_SGT);
   }
 
@@ -2041,6 +2042,11 @@ static int __ovs_nla_put_key(const struct sw_flow_key *swkey,
 			}
 		}
 
+    printk("put sgt %s = 0x%05x\n", is_mask ? "mask" : "key",
+           ntohl(output->cmd.sgt_tci));
+    if (nla_put_be32(skb, OVS_KEY_ATTR_CMD_SGT, output->cmd.sgt_tci))
+      goto nla_put_failure;
+
 		if (swkey->eth.type == htons(ETH_P_802_2)) {
 			/*
 			 * Ethertype 802.2 is represented in the netlink with omitted
@@ -2055,9 +2061,6 @@ static int __ovs_nla_put_key(const struct sw_flow_key *swkey,
 			goto unencap;
 		}
 	}
-
-  if (nla_put_be32(skb, OVS_KEY_ATTR_CMD_SGT, output->cmd.sgt_tci))
-		goto nla_put_failure;
 
 	if (nla_put_be16(skb, OVS_KEY_ATTR_ETHERTYPE, output->eth.type))
 		goto nla_put_failure;

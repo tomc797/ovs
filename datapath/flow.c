@@ -659,6 +659,8 @@ static int key_extract(struct sk_buff *skb, struct sw_flow_key *key)
 
 	skb_reset_mac_len(skb);
 
+
+  key->cmd.sgt_tci = htonl(0);
   if (key->eth.type == htons(ETH_P_CMD)) {
     error = parse_cmd(skb, key);
     if (unlikely(error)) {
