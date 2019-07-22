@@ -785,7 +785,7 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             /** 
              * Parse scalable group tag, contained in Cisco Meta Data
              */
-            ovs_be32 sgt_tci;
+            ovs_be32 sgt_tci = htonl(0x00);
             if (OVS_UNLIKELY(eth_type_cisco_meta(dl_type))) {
                 const struct eth_meta_header *meta = data;
 
@@ -816,8 +816,8 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             }
 
             /* Push SGT */
-            miniflow_push_words_32(mf, sgt_tci, &sgt_tci, 1);
-            miniflow_pad_to_64(mf, sgt_tci);
+            miniflow_push_be32(mf, sgt_tci, sgt_tci);
+            miniflow_push_be32(mf, sgt_pad1, 0);
         }
     } else {
         /* Take dl_type from packet_type. */
