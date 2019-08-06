@@ -2380,9 +2380,9 @@ dp_netdev_flow_offload_put(struct dp_flow_offload_item *offload)
 
     ovs_mutex_lock(&pmd->dp->port_mutex);
     port = dp_netdev_lookup_port(pmd->dp, in_port);
-    if (!port) {
+    if (!port || netdev_vport_is_vport_class(port->netdev->netdev_class)) {
         ovs_mutex_unlock(&pmd->dp->port_mutex);
-        return -1;
+        goto err_free;
     }
     ret = netdev_flow_put(port->netdev, &offload->match,
                           CONST_CAST(struct nlattr *, offload->actions),
@@ -2391,20 +2391,22 @@ dp_netdev_flow_offload_put(struct dp_flow_offload_item *offload)
     ovs_mutex_unlock(&pmd->dp->port_mutex);
 
     if (ret) {
-        if (!modification) {
-            flow_mark_free(mark);
-        } else {
-            mark_to_flow_disassociate(pmd, flow);
-        }
-        return -1;
+        goto err_free;
     }
 
     if (!modification) {
         megaflow_to_mark_associate(&flow->mega_ufid, mark);
         mark_to_flow_associate(mark, flow);
     }
-
     return 0;
+
+err_free:
+    if (!modification) {
+        flow_mark_free(mark);
+    } else {
+        mark_to_flow_disassociate(pmd, flow);
+    }
+    return -1;
 }
 
 static void *
