@@ -2364,6 +2364,7 @@ output_normal(struct xlate_ctx *ctx, const struct xbundle *out_xbundle,
     struct xlate_bond_recirc xr;
     bool use_recirc = false;
     struct xvlan out_xvlan;
+    ovs_be32 old_sgt_tci;
 
     check_and_set_cvlan_mask(ctx->wc, out_xbundle);
 
@@ -2431,9 +2432,13 @@ output_normal(struct xlate_ctx *ctx, const struct xbundle *out_xbundle,
     memcpy(&old_vlans, &ctx->xin->flow.vlans, sizeof(old_vlans));
     xvlan_put(&ctx->xin->flow, &out_xvlan);
 
+    old_sgt_tci = ctx->xin->flow.sgt_tci;
+    flow_fixup_sgt(&ctx->xin->flow);
+
     compose_output_action(ctx, xport->ofp_port, use_recirc ? &xr : NULL,
                           false, false);
     memcpy(&ctx->xin->flow.vlans, &old_vlans, sizeof(old_vlans));
+    ctx->xin->flow.sgt_tci = old_sgt_tci;
 }
 
 /* A VM broadcasts a gratuitous ARP to indicate that it has resumed after

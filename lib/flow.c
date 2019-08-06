@@ -362,6 +362,31 @@ parse_vlan(const void **datap, size_t *sizep, union flow_vlan_hdr *vlan_hdrs)
     return n;
 }
 
+static inline ovs_be32
+parse_sgt(const void **datap, size_t *sizep, struct dp_packet *packet)
+{
+  const struct sgt_fixed1_head *sgt;
+  ovs_be16 *dl_type;
+  ovs_be32 sgt_tci = htonl(0);
+
+  dl_type = (ovs_be16 *)*datap;
+  if (htons(ETH_TYPE_CMD) != *dl_type)
+    goto done;
+
+  if (OVS_UNLIKELY(*sizep < SGT_HEAD_LEN + ETH_ETHERTYPE_LEN))
+    goto done;
+
+  sgt = *datap;
+  if (OVS_UNLIKELY(!(sgt->ver_len == htons(0x0101)
+                     && sgt->o1_len_type == htons(0x01))))
+    goto done;
+  data_pull(datap, sizep, SGT_HEAD_LEN);
+  dp_packet_set_eth_metadata(packet, (char *)sgt);
+  sgt_tci = htonl(ntohs(sgt->o1_value)|SGT_TAG_PRESENT);
+done:
+  return sgt_tci;
+}
+
 static inline ALWAYS_INLINE ovs_be16
 parse_ethertype(const void **datap, size_t *sizep)
 {
@@ -780,34 +805,12 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             union flow_vlan_hdr vlans[FLOW_MAX_VLAN_HEADERS];
             size_t num_vlans = parse_vlan(&data, &size, vlans);
 
-            dl_type = parse_ethertype(&data, &size);
-
             /** 
-             * Parse scalable group tag, contained in Cisco Meta Data
+             * SGT 
              */
-            ovs_be32 sgt_tci = htonl(0x00);
-            if (OVS_UNLIKELY(eth_type_cisco_meta(dl_type))) {
-                const struct eth_meta_header *meta = data;
+            ovs_be32 sgt_tci = parse_sgt(&data, &size, packet);
 
-                /* Parse Cisco Metdata header */
-                if (OVS_LIKELY(size >= ETH_META_HEADER_LEN
-                               && meta->meta_ver == 0x01
-                               && meta->meta_len >= 1u)) {
-                    /**
-                     * If SGT option exists, parse.
-                     */
-                     if (OVS_LIKELY(meta->meta_option == htons(0x0001))) {
-                         sgt_tci = htonl(ntohs(meta->meta_sgt)|SGT_TAG_PRESENT);
-                     }
-
-                    if (OVS_LIKELY(meta->meta_len == 1u
-                                   && meta->meta_option == htons(0x0001))) {
-                        dl_type = meta->meta_next_type;
-                        data_pull(&data, &size, ETH_META_HEADER_LEN);
-                        dp_packet_set_eth_metadata(packet, (char*) meta);
-                    }
-                }
-            }
+            dl_type = parse_ethertype(&data, &size);
 
             miniflow_push_be16(mf, dl_type, dl_type);
             miniflow_pad_to_64(mf, dl_type);

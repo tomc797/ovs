@@ -1632,41 +1632,24 @@ BUILD_ASSERT_DECL(DNS_HEADER_LEN == sizeof(struct dns_header));
  * Len = 0, Option Type = 0x00001
  * 
  */
-#define ETH_TYPE_CISCO_META		      0x8909 /* Cisco Meta Data */
-#define ETH_META_HEADER_LEN         (8u)
-#define CISCO_META_ETH_HEADER_LEN   (ETH_HEADER_LEN+CISCO_META_HEADER_LEN)
+#define ETH_TYPE_CMD		            0x8909 /* Cisco Meta Data */
 #define ETH_ETHERTYPE_LEN           (2u)
 
-static inline bool eth_type_cisco_meta(ovs_be16 eth_type)
+struct sgt_fixed1_head
 {
-  return eth_type == htons(ETH_TYPE_CISCO_META);
-}
-
-struct eth_meta_header
-{
-    uint8_t meta_ver;
-    uint8_t meta_len;
-    ovs_be16 meta_option;
-    ovs_be16 meta_sgt;
-    ovs_be16 meta_next_type;
+    ovs_be16 ethtype;
+    ovs_be16 ver_len;
+    ovs_be16 o1_len_type;
+    ovs_be16 o1_value;
 };
 
-struct cisco_meta_eth_header
-{
-    struct eth_addr eth_dst;
-    struct eth_addr eth_src;
-    ovs_be16 eth_type;
-    uint8_t meta_ver;
-    uint8_t meta_len;
-    ovs_be16 meta_option;
-    ovs_be16 meta_sgt;
-    ovs_be16 meta_next_type;
-};
+#define SGT_HEAD_LEN (8u)
 
-_Static_assert(sizeof(struct eth_meta_header) == ETH_META_HEADER_LEN, "struct eth_meta_header has unintended padding");
-_Static_assert(sizeof(union flow_sgt_tag) == sizeof(uint32_t), "struct flow_sgt_tag has unintended padding");
+_Static_assert(sizeof(struct sgt_fixed1_head) == SGT_HEAD_LEN, "struct sgt_fixed1_head is the wrong size. Is there unintended padding?");
+_Static_assert(_Alignof(struct sgt_fixed1_head) == _Alignof(ovs_be16), "struct sgt_fixed1_head is not 16-bit aligned");
 
 /** actions */
 void eth_strip_sgt(struct dp_packet*);
+void set_sgt(struct dp_packet*, ovs_be32);
 
 #endif /* packets.h */

@@ -446,6 +446,10 @@ odp_execute_set_action(struct dp_packet *packet, const struct nlattr *a)
         md->recirc_id = nl_attr_get_u32(a);
         break;
 
+    case OVS_KEY_ATTR_CMD_SGT:
+        set_sgt(packet, nl_attr_get_be32(a));
+        break;
+
     case OVS_KEY_ATTR_UNSPEC:
     case OVS_KEY_ATTR_PACKET_TYPE:
     case OVS_KEY_ATTR_ENCAP:
@@ -459,7 +463,6 @@ odp_execute_set_action(struct dp_packet *packet, const struct nlattr *a)
     case OVS_KEY_ATTR_CT_ZONE:
     case OVS_KEY_ATTR_CT_MARK:
     case OVS_KEY_ATTR_CT_LABELS:
-    case OVS_KEY_ATTR_CMD_SGT:
     case __OVS_KEY_ATTR_MAX:
     default:
         OVS_NOT_REACHED();

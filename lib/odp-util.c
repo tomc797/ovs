@@ -7915,7 +7915,8 @@ commit_encap_decap_action(const struct flow *flow,
 
 static enum slow_path_reason
 commit_set_sgt_action(const struct flow *flow, struct flow *base,
-                      struct ofpbuf *odp_actions)
+                      struct ofpbuf *odp_actions,
+                      struct flow_wildcards *wc)
 {
     if (flow->packet_type != htonl(PT_ETH)) {
         return 0;
@@ -7929,11 +7930,14 @@ commit_set_sgt_action(const struct flow *flow, struct flow *base,
      * SGT are different; perform action
      */
     base->sgt_tci = flow->sgt_tci;
+    wc->masks.sgt_tci = htonl(SGT_TCI_MASK);
     if ((base->sgt_tci&htonl(SGT_TAG_PRESENT)) == 0) {
         nl_msg_put_flag(odp_actions, OVS_ACTION_ATTR_STRIP_SGT);
-        return SLOW_ACTION;
+    } else {
+        commit_set_action(odp_actions, OVS_KEY_ATTR_CMD_SGT,
+                          &flow->sgt_tci, sizeof flow->sgt_tci);
     }
-    return 0;
+    return SLOW_ACTION;
 }
 
 /* If any of the flow key data that ODP actions can modify are different in
@@ -7958,7 +7962,7 @@ commit_odp_actions(const struct flow *flow, struct flow *base,
                               pending_encap, pending_decap, encap_data);
     commit_set_ether_action(flow, base, odp_actions, wc, use_masked);
     // compose sgt strip
-    slow = commit_set_sgt_action(flow, base, odp_actions);
+    slow = commit_set_sgt_action(flow, base, odp_actions, wc);
     /* Make packet a non-MPLS packet before committing L3/4 actions,
      * which would otherwise do nothing. */
     if (eth_type_mpls(base->dl_type) && !eth_type_mpls(flow->dl_type)) {

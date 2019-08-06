@@ -1211,4 +1211,11 @@ static inline bool tp_dst_equals(const struct flow *flow, uint16_t port,
     return !diff;
 }
 
+static inline void
+flow_fixup_sgt(struct flow *flow)
+{
+    if (!(flow->sgt_tci&htonl(SGT_TAG_PRESENT)))
+        flow->sgt_tci = htonl(0);
+}
+
 #endif /* flow.h */

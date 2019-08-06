@@ -1706,14 +1706,39 @@ void
 eth_strip_sgt(struct dp_packet *packet)
 {
     char *eh = dp_packet_eth(packet);
-    int mac_len, increment;
 
     if(OVS_UNLIKELY(!(eh && packet->eth_metadata_ofs != UINT16_MAX)))
         return;
-    mac_len = MIN(packet->l2_5_ofs, packet->l3_ofs);
-    increment = mac_len - packet->eth_metadata_ofs;
-    mac_len -= increment;
-    (void) memmove (eh+increment, eh, mac_len-ETH_ETHERTYPE_LEN);
-    dp_packet_resize_l2(packet, -increment);
+    (void) memmove (eh+SGT_HEAD_LEN, eh, packet->eth_metadata_ofs);
+    dp_packet_resize_l2(packet, -SGT_HEAD_LEN);
     dp_packet_set_eth_metadata(packet, NULL);
+}
+
+void
+set_sgt(struct dp_packet *packet, ovs_be32 sgt_tci)
+{
+  char *eh = dp_packet_eth(packet);
+  struct sgt_fixed1_head *sgt;
+
+  // Ethernet header is 16-bit aligned
+  // CMD header is 16-bit aligned and is a multiple of 4 octets
+  // So we are safe to directly access all fields
+  // Moveover, since CMD header is a multiple of 4 octets, IPv4 remains
+  // on a 32-bit boundary
+  ovs_assert((((uintptr_t) eh)&2) == 0);
+  if (!(sgt_tci & htonl(SGT_TAG_PRESENT))) {
+    eth_strip_sgt(packet);
+    return;
+  }
+  sgt = dp_packet_eth_metadata(packet);
+  // insert header
+  if (sgt == NULL) {
+    int ofs = MIN(packet->l2_5_ofs, packet->l3_ofs) - ETH_ETHERTYPE_LEN;
+    eh = memmove(dp_packet_resize_l2(packet, SGT_HEAD_LEN), eh, ofs);
+    sgt = ALIGNED_CAST(struct sgt_fixed1_head *, eh + ofs);
+    *sgt = (struct sgt_fixed1_head) { .ethtype = htons(ETH_TYPE_CMD),
+                                      .ver_len = htons(0x0101),
+                                      .o1_len_type = htons(0x0001) };
+  }
+  sgt->o1_value = htons(ntohl(sgt_tci));
 }
