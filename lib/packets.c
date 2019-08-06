@@ -1738,7 +1738,8 @@ set_sgt(struct dp_packet *packet, ovs_be32 sgt_tci)
     sgt = ALIGNED_CAST(struct sgt_fixed1_head *, eh + ofs);
     *sgt = (struct sgt_fixed1_head) { .ethtype = htons(ETH_TYPE_CMD),
                                       .ver_len = htons(0x0101),
-                                      .o1_len_type = htons(0x0001) };
+                                      .o1_len_type = htons(0x0001),
+                                      .o1_value = htons(0x0), };
   }
   sgt->o1_value = htons(ntohl(sgt_tci));
 }
