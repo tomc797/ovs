@@ -540,47 +540,36 @@ static int parse_nsh(struct sk_buff *skb, struct sw_flow_key *key)
 
 	return 0;
 }
-
-static int parse_cmd(struct sk_buff *skb, struct sw_flow_key *key)
+static int parse_sgt(struct sk_buff *skb, struct sw_flow_key *key)
 {
-  unsigned int nh_ofs = skb_network_offset(skb);
-  unsigned int ver, len;
-  u8 *nh;
-  int err;
+  struct sgt_fixed1_head *h;
   __be16 ethertype;
 
-  err = check_header(skb, nh_ofs+2);
-  if (unlikely(err))
-    return err;
-  nh = skb_network_header(skb);
-  ver = *nh;
-  len = *(nh+1);
-  if (ver != 0x01)
-    return -EINVAL;
-  len = 4*(len+1);
-  err = check_header(skb, nh_ofs+len);
-  if (unlikely(err))
-    return -EINVAL;
   /**
-   * point network_header to next sdu
-   * update ethertype
+   * set default value
    */
-  skb_set_network_header(skb, nh_ofs+len);
-  skb_reset_mac_len(skb);
-  ethertype = *(__be16*)(nh+len-2);
-  key->eth.type = ethertype;
-  if (likely(skb->protocol == ETH_P_CMD))
-    skb->protocol = key->eth.type;
+  key->cmd.sgt_tci = htonl(0x0);
+
+  ethertype = *(__be16 *)skb->data;
+  if (ethertype != htons(ETH_P_CMD))
+    return 0;
+  if (unlikely(skb->len < SGT_HEAD_LEN + ETH_TLEN))
+    return 0;
+	if (unlikely(!pskb_may_pull(skb, SGT_HEAD_LEN + ETH_TLEN)))
+    return -ENOMEM;
   /**
-   * SGT will be the first option
+   * check version, length; check option length and type
+   * only accept a single format
    */
-  if (len >= 8) {
-    __be16 type = *(__be16*)(nh+2);
-    __be16 value = *(__be16*)(nh+4);
-    if (type == htons(CMD_O_SGT)) {
-      key->cmd.sgt_tci = htonl(ntohs(value)|SGT_TAG_PRESENT);
-    }
-  }
+  h = (struct sgt_fixed1_head *)skb->data;
+  if (unlikely(!(h->ver_len == htons(0x0101))))
+    return 0;
+  if (unlikely(!(h->o1_len_type == htons(CMD_O_SGT))))
+    return 0;
+  /**
+   * format fits bill
+   */
+  key->cmd.sgt_tci = htonl(ntohs(h->o1_value)|SGT_TAG_PRESENT);
   return 0;
 }
 
@@ -640,6 +629,9 @@ static int key_extract(struct sk_buff *skb, struct sw_flow_key *key)
 		if (unlikely(parse_vlan(skb, key)))
 			return -ENOMEM;
 
+    if (unlikely(parse_sgt(skb, key)))
+      return -ENOMEM;
+
 		key->eth.type = parse_ethertype(skb);
 		if (unlikely(key->eth.type == htons(0)))
 			return -ENOMEM;
@@ -658,17 +650,6 @@ static int key_extract(struct sk_buff *skb, struct sw_flow_key *key)
 	}
 
 	skb_reset_mac_len(skb);
-
-
-  key->cmd.sgt_tci = htonl(0);
-  if (key->eth.type == htons(ETH_P_CMD)) {
-    error = parse_cmd(skb, key);
-    if (unlikely(error)) {
-      if (error == -EINVAL)
-        error = 0;
-      return error;
-    }
-  }
   
   printk("My sgt is 0x%04x\n", (uint16_t) ntohl(key->cmd.sgt_tci));
 

@@ -1187,6 +1187,10 @@ static int execute_masked_set_action(struct sk_buff *skb,
 								    __be32 *));
 		break;
 
+  case OVS_KEY_ATTR_CMD_SGT:
+    err = -EINVAL;
+    break;
+
 	case OVS_KEY_ATTR_CT_STATE:
 	case OVS_KEY_ATTR_CT_ZONE:
 	case OVS_KEY_ATTR_CT_MARK:
