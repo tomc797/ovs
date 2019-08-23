@@ -5880,7 +5880,7 @@ odp_flow_key_from_flow__(const struct odp_flow_key_parms *parms,
     }
 
     // Add the SGT if marked
-    if (data->sgt_tci != htonl(0)) {
+    if (data->sgt_tci) {
         nl_msg_put_be32(buf, OVS_KEY_ATTR_CMD_SGT, data->sgt_tci);
     }
 
@@ -6399,9 +6399,9 @@ parse_l2_5_onward(const struct nlattr *attrs[OVS_KEY_ATTR_MAX + 1],
     size_t check_len = 0;
     enum ovs_key_attr expected_bit = 0xff;
 
-    if (is_mask) {
-        flow->sgt_tci = htonl(SGT_TCI_MASK);
-    }
+    // if (is_mask) {
+        // flow->sgt_tci = htonl(SGT_TCI_MASK);
+    // }
 
     if (present_attrs & (UINT64_C(1) << OVS_KEY_ATTR_CMD_SGT)) {
         flow->sgt_tci = nl_attr_get_be32(attrs[OVS_KEY_ATTR_CMD_SGT]);
@@ -7937,7 +7937,7 @@ commit_set_sgt_action(const struct flow *flow, struct flow *base,
         commit_set_action(odp_actions, OVS_KEY_ATTR_CMD_SGT,
                           &flow->sgt_tci, sizeof flow->sgt_tci);
     }
-    return SLOW_ACTION;
+    return 0;
 }
 
 /* If any of the flow key data that ODP actions can modify are different in

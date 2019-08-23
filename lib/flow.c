@@ -366,11 +366,11 @@ static inline ovs_be32
 parse_sgt(const void **datap, size_t *sizep, struct dp_packet *packet)
 {
   const struct sgt_fixed1_head *sgt;
-  ovs_be16 *dl_type;
+  ovs_be16 dl_type;
   ovs_be32 sgt_tci = htonl(0);
 
-  dl_type = (ovs_be16 *)*datap;
-  if (htons(ETH_TYPE_CMD) != *dl_type)
+  dl_type = *(ovs_be16 *)*datap;
+  if (htons(ETH_TYPE_CMD) != dl_type)
     goto done;
 
   if (OVS_UNLIKELY(*sizep < SGT_HEAD_LEN + ETH_ETHERTYPE_LEN))
@@ -819,8 +819,9 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
             }
 
             /* Push SGT */
-            miniflow_push_be32(mf, sgt_tci, sgt_tci);
-            miniflow_push_be32(mf, sgt_pad1, 0);
+            if (sgt_tci & htonl(SGT_TAG_PRESENT)) {
+                miniflow_push_be32(mf, sgt_tci, sgt_tci);
+            }
         }
     } else {
         /* Take dl_type from packet_type. */

@@ -549,13 +549,12 @@ static int parse_sgt(struct sk_buff *skb, struct sw_flow_key *key)
    * set default value
    */
   key->cmd.sgt_tci = htonl(0x0);
-
   ethertype = *(__be16 *)skb->data;
   if (ethertype != htons(ETH_P_CMD))
     return 0;
   if (unlikely(skb->len < SGT_HEAD_LEN + ETH_TLEN))
     return 0;
-	if (unlikely(!pskb_may_pull(skb, SGT_HEAD_LEN + ETH_TLEN)))
+  if (unlikely(!pskb_may_pull(skb, SGT_HEAD_LEN + ETH_TLEN)))
     return -ENOMEM;
   /**
    * check version, length; check option length and type
@@ -566,6 +565,11 @@ static int parse_sgt(struct sk_buff *skb, struct sw_flow_key *key)
     return 0;
   if (unlikely(!(h->o1_len_type == htons(CMD_O_SGT))))
     return 0;
+  /**
+   * format checks out, pull
+   */
+  __skb_pull(skb, SGT_HEAD_LEN);
+
   /**
    * format fits bill
    */
@@ -629,8 +633,8 @@ static int key_extract(struct sk_buff *skb, struct sw_flow_key *key)
 		if (unlikely(parse_vlan(skb, key)))
 			return -ENOMEM;
 
-    if (unlikely(parse_sgt(skb, key)))
-      return -ENOMEM;
+                if (unlikely(parse_sgt(skb, key)))
+                        return -ENOMEM;
 
 		key->eth.type = parse_ethertype(skb);
 		if (unlikely(key->eth.type == htons(0)))

@@ -43,6 +43,7 @@
 #include "gso.h"
 #include "vport.h"
 #include "flow_netlink.h"
+#include "cmd.h"
 
 static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 			      struct sw_flow_key *key,
@@ -282,6 +283,94 @@ static int set_mpls(struct sk_buff *skb, struct sw_flow_key *flow_key,
 	return 0;
 }
 
+static int set_sgt(struct sk_buff *skb, struct sw_flow_key *key,
+                   __be32 sgt_tci, __be32 sgt_mask)
+{
+  struct ethhdr *eth;
+  struct vlan_ethhdr *vlan_eth;
+  struct sgt_fixed1_head *sgt;
+  unsigned int len, offset;
+  int err = 0, check = skb_mac_offset(skb);
+  __be16 sgt_tid = htons(ntohl(sgt_tci)), *eth_type;
+
+  if (WARN_ONCE(check,
+                "set_sgt got skb with skb->data not at mac header (offset %d)\n",
+		check)) {
+    return -EINVAL;
+  }
+
+  WARN((sgt_mask & htonl(SGT_TCI_MASK)) != htonl(SGT_TCI_MASK),
+       "Non-constant mask = 0x%05x\n", htonl(sgt_mask)&SGT_TCI_MASK);
+
+  /**
+   * We restrict the cases we handle:
+   * - Ethernet
+   * - Ethernet + VLAN
+   * If the frame has a SGT, the CMD header must be SGT_HEAD_LEN
+   * CMD is inserted after the Ethernet/Ethernet+VLAN and must
+   * be the last L2 header
+   */
+  eth = eth_hdr(skb);
+  eth_type = &eth->h_proto;
+  len = skb->mac_len - ETH_HLEN;
+  if (skb->mac_len >= VLAN_ETH_HLEN && eth_type_vlan(*eth_type)) {
+    vlan_eth = vlan_eth_hdr(skb);
+    eth_type = &vlan_eth->h_vlan_encapsulated_proto;
+    len = skb->mac_len - VLAN_ETH_HLEN;
+  }
+  if (!((*eth_type == htons(ETH_P_CMD) && len == SGT_HEAD_LEN)
+        || (*eth_type != htons(ETH_P_CMD) && len == 0))) {
+    return -EINVAL;
+  }
+  offset = (char *)eth_type - (char *)eth;
+  // Remove SGT
+  if (!(sgt_tci & htonl(SGT_TAG_PRESENT))) {
+    // no SGT
+    if (!len)
+      goto done;
+    err = skb_ensure_writable(skb, offset+len);
+    if (unlikely(err))
+      goto done;
+    skb_postpull_rcsum(skb, skb->data+offset, len);
+    memmove(skb->data+len, skb->data, offset);
+    __skb_pull(skb, len);
+    skb_reset_mac_header(skb);
+    skb_reset_mac_len(skb);
+    invalidate_flow_key(key);
+  }
+  // Insert SGT
+  else if (len == 0) {
+    // Create space for header
+    err = skb_cow(skb, SGT_HEAD_LEN);
+    if (unlikely(err))
+      return err;
+    __skb_push(skb, SGT_HEAD_LEN);
+    memmove(skb->data, skb->data+SGT_HEAD_LEN, skb->mac_len-ETH_TLEN);
+    skb_reset_mac_header(skb);
+    skb_reset_mac_len(skb);
+    sgt = (struct sgt_fixed1_head *)(skb->data+offset);
+    *sgt = (struct sgt_fixed1_head){ .ethtype = htons(ETH_P_CMD),
+                                     .ver_len = htons(0x0101),
+                                     .o1_len_type = htons(CMD_O_SGT),
+                                     .o1_value = sgt_tid, };
+    skb_postpush_rcsum(skb, sgt, SGT_HEAD_LEN);
+    invalidate_flow_key(key);
+  }
+  // Modify SGT
+  else {
+    err = skb_ensure_writable(skb, offset+SGT_HEAD_LEN);
+    if (unlikely(err))
+      return err;
+    sgt = (struct sgt_fixed1_head *)(skb->data+offset);
+    skb_postpull_rcsum(skb, sgt, SGT_HEAD_LEN);
+    sgt->o1_value = sgt_tid;
+    skb_postpush_rcsum(skb, sgt, SGT_HEAD_LEN);
+  }
+
+done:
+  return err;
+}
+
 static int pop_vlan(struct sk_buff *skb, struct sw_flow_key *key)
 {
 	int err;
@@ -350,12 +439,17 @@ static int set_eth_addr(struct sk_buff *skb, struct sw_flow_key *flow_key,
  */
 static int pop_eth(struct sk_buff *skb, struct sw_flow_key *key)
 {
-	skb_pull_rcsum(skb, ETH_HLEN);
+  /**
+   * Previously, would only pull ETH_HLEN. But SGT is part of the 
+   * L2 header. Modified to pull entire MAC header.
+   */
+	skb_pull_rcsum(skb, skb->mac_len);
 	skb_reset_mac_header(skb);
 	skb_reset_mac_len(skb);
 
 	/* safe right before invalidate_flow_key */
 	key->mac_proto = MAC_PROTO_NONE;
+  key->cmd.sgt_tci = htonl(0);
 	invalidate_flow_key(key);
 	return 0;
 }
@@ -1188,7 +1282,7 @@ static int execute_masked_set_action(struct sk_buff *skb,
 		break;
 
   case OVS_KEY_ATTR_CMD_SGT:
-    err = -EINVAL;
+    err = set_sgt(skb, flow_key, nla_get_be32(a), *get_mask(a, __be32 *));
     break;
 
 	case OVS_KEY_ATTR_CT_STATE:
@@ -1275,6 +1369,10 @@ static int do_execute_actions(struct datapath *dp, struct sk_buff *skb,
 		case OVS_ACTION_ATTR_HASH:
 			execute_hash(skb, key, a);
 			break;
+
+    case OVS_ACTION_ATTR_STRIP_SGT:
+      err = set_sgt(skb, key, htonl(0), htonl(SGT_TCI_MASK));
+      break;
 
 		case OVS_ACTION_ATTR_PUSH_MPLS:
 			err = push_mpls(skb, key, nla_data(a));

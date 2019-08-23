@@ -1531,7 +1531,6 @@ static int ovs_key_from_nlattrs(struct net *net, struct sw_flow_match *match,
 
   if (attrs & (1ULL << OVS_KEY_ATTR_CMD_SGT)) {
     __be32 sgt_tci = nla_get_be32(a[OVS_KEY_ATTR_CMD_SGT]);
-    printk("get sgt %s = 0x%05x\n", is_mask ? "mask" : "key", ntohl(sgt_tci));
     SW_FLOW_KEY_PUT(match, cmd.sgt_tci, sgt_tci, is_mask);
     attrs &= ~(1ULL << OVS_KEY_ATTR_CMD_SGT);
   }
@@ -2042,8 +2041,6 @@ static int __ovs_nla_put_key(const struct sw_flow_key *swkey,
 			}
 		}
 
-    printk("put sgt %s = 0x%05x\n", is_mask ? "mask" : "key",
-           ntohl(output->cmd.sgt_tci));
     if (nla_put_be32(skb, OVS_KEY_ATTR_CMD_SGT, output->cmd.sgt_tci))
       goto nla_put_failure;
 
@@ -2708,6 +2705,11 @@ static int validate_set(const struct nlattr *a,
 			return -EINVAL;
 		break;
 
+  case OVS_KEY_ATTR_CMD_SGT:
+    if (mac_proto != MAC_PROTO_ETHERNET)
+      return -EINVAL;
+    break;
+
 	case OVS_KEY_ATTR_TUNNEL:
 #ifndef USE_UPSTREAM_TUNNEL
 		if (eth_p_mpls(eth_type))
@@ -2910,6 +2912,7 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 			[OVS_ACTION_ATTR_POP_NSH] = 0,
 			[OVS_ACTION_ATTR_METER] = sizeof(u32),
 			[OVS_ACTION_ATTR_CLONE] = (u32)-1,
+      [OVS_ACTION_ATTR_STRIP_SGT] = 0,
 		};
 		const struct ovs_action_push_vlan *vlan;
 		int type = nla_type(a);
@@ -2973,6 +2976,11 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 				return -EINVAL;
 			vlan_tci = vlan->vlan_tci;
 			break;
+
+    case OVS_ACTION_ATTR_STRIP_SGT:
+      if (mac_proto != MAC_PROTO_ETHERNET)
+        return -EINVAL;
+      break;
 
 		case OVS_ACTION_ATTR_RECIRC:
 			break;
