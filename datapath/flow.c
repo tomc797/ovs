@@ -53,6 +53,7 @@
 #include "flow.h"
 #include "flow_netlink.h"
 #include "vport.h"
+#include "cmd.h"
 
 u64 ovs_flow_used_time(unsigned long flow_jiffies)
 {
@@ -382,6 +383,43 @@ static int parse_vlan(struct sk_buff *skb, struct sw_flow_key *key)
 	return 0;
 }
 
+static int parse_sgt(struct sk_buff *skb, struct sw_flow_key *key)
+{
+  struct sgt_fixed1_head *h;
+  __be16 ethertype;
+
+  /**
+   * set default value
+   */
+  key->cmd.sgt_tci = htonl(0x0);
+  ethertype = *(__be16 *)skb->data;
+  if (ethertype != htons(ETH_P_CMD))
+    return 0;
+  if (unlikely(skb->len < SGT_HEAD_LEN + ETH_TLEN))
+    return 0;
+  if (unlikely(!pskb_may_pull(skb, SGT_HEAD_LEN + ETH_TLEN)))
+    return -ENOMEM;
+  /**
+   * check version, length; check option length and type
+   * only accept a single format
+   */
+  h = (struct sgt_fixed1_head *)skb->data;
+  if (unlikely(!(h->ver_len == htons(0x0101))))
+    return 0;
+  if (unlikely(!(h->o1_len_type == htons(CMD_O_SGT))))
+    return 0;
+  /**
+   * format checks out, pull
+   */
+  __skb_pull(skb, SGT_HEAD_LEN);
+
+  /**
+   * format fits bill
+   */
+  key->cmd.sgt_tci = htonl(ntohs(h->o1_value)|SGT_TAG_PRESENT);
+  return 0;
+}
+
 static __be16 parse_ethertype(struct sk_buff *skb)
 {
 	struct llc_snap_hdr {
@@ -595,6 +633,9 @@ static int key_extract(struct sk_buff *skb, struct sw_flow_key *key)
 
 		if (unlikely(parse_vlan(skb, key)))
 			return -ENOMEM;
+
+    if (unlikely(parse_sgt(skb, key)))
+      return -ENOMEM;
 
 		key->eth.type = parse_ethertype(skb);
 		if (unlikely(key->eth.type == htons(0)))

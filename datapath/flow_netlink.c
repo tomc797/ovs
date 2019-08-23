@@ -54,6 +54,7 @@
 #include "flow.h"
 #include "flow_netlink.h"
 #include "gso.h"
+#include "cmd.h"
 
 struct ovs_len_tbl {
 	int len;
@@ -189,6 +190,9 @@ static bool match_validate(const struct sw_flow_match *match,
 	mask_allowed |= ((1ULL << OVS_KEY_ATTR_TUNNEL)
 		       | (1ULL << OVS_KEY_ATTR_IN_PORT)
 		       | (1ULL << OVS_KEY_ATTR_ETHERTYPE));
+
+  /* SGT is always allowed in the mask field. */
+  mask_allowed |= (1ULL << OVS_KEY_ATTR_CMD_SGT);
 
 	/* Check key attributes. */
 	if (match->key->eth.type == htons(ETH_P_ARP)
@@ -449,6 +453,7 @@ static const struct ovs_len_tbl ovs_key_lens[OVS_KEY_ATTR_MAX + 1] = {
 		.len = sizeof(struct ovs_key_ct_tuple_ipv6) },
 	[OVS_KEY_ATTR_NSH]       = { .len = OVS_ATTR_NESTED,
 				     .next = ovs_nsh_key_attr_lens, },
+  [OVS_KEY_ATTR_CMD_SGT]   = { .len = sizeof(__be32) },
 };
 
 static bool check_attr_len(unsigned int attr_len, unsigned int expected_len)
@@ -1524,6 +1529,12 @@ static int ovs_key_from_nlattrs(struct net *net, struct sw_flow_match *match,
 		return -EINVAL;
 	}
 
+  if (attrs & (1ULL << OVS_KEY_ATTR_CMD_SGT)) {
+    __be32 sgt_tci = nla_get_be32(a[OVS_KEY_ATTR_CMD_SGT]);
+    SW_FLOW_KEY_PUT(match, cmd.sgt_tci, sgt_tci, is_mask);
+    attrs &= ~(1ULL << OVS_KEY_ATTR_CMD_SGT);
+  }
+
 	if (attrs & (1 << OVS_KEY_ATTR_IPV4)) {
 		const struct ovs_key_ipv4 *ipv4_key;
 
@@ -2029,6 +2040,9 @@ static int __ovs_nla_put_key(const struct sw_flow_key *swkey,
 					goto unencap;
 			}
 		}
+
+    if (nla_put_be32(skb, OVS_KEY_ATTR_CMD_SGT, output->cmd.sgt_tci))
+      goto nla_put_failure;
 
 		if (swkey->eth.type == htons(ETH_P_802_2)) {
 			/*
@@ -2790,6 +2804,11 @@ static int validate_set(const struct nlattr *a,
 			return -EINVAL;
 		break;
 
+  case OVS_KEY_ATTR_CMD_SGT:
+    if (mac_proto != MAC_PROTO_ETHERNET)
+      return -EINVAL;
+    break;
+
 	default:
 		return -EINVAL;
 	}
@@ -2975,6 +2994,7 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 			[OVS_ACTION_ATTR_METER] = sizeof(u32),
 			[OVS_ACTION_ATTR_CLONE] = (u32)-1,
 			[OVS_ACTION_ATTR_CHECK_PKT_LEN] = (u32)-1,
+      [OVS_ACTION_ATTR_STRIP_SGT] = 0,
 		};
 		const struct ovs_action_push_vlan *vlan;
 		int type = nla_type(a);
@@ -3038,6 +3058,11 @@ static int __ovs_nla_copy_actions(struct net *net, const struct nlattr *attr,
 				return -EINVAL;
 			vlan_tci = vlan->vlan_tci;
 			break;
+
+    case OVS_ACTION_ATTR_STRIP_SGT:
+      if (mac_proto != MAC_PROTO_ETHERNET)
+        return -EINVAL;
+      break;
 
 		case OVS_ACTION_ATTR_RECIRC:
 			break;

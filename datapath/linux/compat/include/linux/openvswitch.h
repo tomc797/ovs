@@ -378,6 +378,8 @@ enum ovs_key_attr {
 	OVS_KEY_ATTR_ND_EXTENSIONS, /* struct ovs_key_nd_extensions */
 #endif
 
+  OVS_KEY_ATTR_CMD_SGT = 31,
+
 	__OVS_KEY_ATTR_MAX
 };
 
@@ -990,6 +992,9 @@ enum ovs_action_attr {
 	OVS_ACTION_ATTR_TUNNEL_PUSH,   /* struct ovs_action_push_tnl*/
 	OVS_ACTION_ATTR_TUNNEL_POP,    /* u32 port number. */
 #endif
+
+  OVS_ACTION_ATTR_STRIP_SGT = 24,
+
 	__OVS_ACTION_ATTR_MAX,	      /* Nothing past this will be accepted
 				       * from userspace. */
 

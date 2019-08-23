@@ -38,6 +38,7 @@ vport_stt_sources = vport-stt.c
 nsh_sources = nsh.c
 
 openvswitch_headers = \
+  cmd.h \
 	compat.h \
 	conntrack.h \
 	datapath.h \
