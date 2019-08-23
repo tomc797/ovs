@@ -945,7 +945,7 @@ enum ovs_action_attr {
 	OVS_ACTION_ATTR_TUNNEL_PUSH,   /* struct ovs_action_push_tnl*/
 	OVS_ACTION_ATTR_TUNNEL_POP,    /* u32 port number. */
 #endif
-  OVS_ACTION_ATTR_STRIP_SGT = 23, /* no argument */
+  OVS_ACTION_ATTR_STRIP_SGT = 24, /* no argument */
 	__OVS_ACTION_ATTR_MAX,	      /* Nothing past this will be accepted
 				       * from userspace. */
 

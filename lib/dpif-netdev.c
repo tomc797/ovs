@@ -7244,6 +7244,7 @@ dp_execute_cb(void *aux_, struct dp_packet_batch *packets_,
     case OVS_ACTION_ATTR_CT_CLEAR:
     case OVS_ACTION_ATTR_STRIP_SGT:
     case __OVS_ACTION_ATTR_MAX:
+    default:
         OVS_NOT_REACHED();
     }
 
